@@ -1,0 +1,41 @@
+<html>
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <head>
+    <title>Queries</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet" media="screen">
+      <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type = "text/css" />
+  </head>
+  <body>
+    <div class="container-fluid">
+      <h2>Queries in last {{num_minutes}} minutes{% if username != none %} by user {{username.upper()}}{% endif %}</h2>
+      <br>
+        <div class="row">
+            <div class="col-2 card-header">Status</div>
+            <div class="col-5 card-header">SQL Text</div>
+            <div class="col-1 card-header">User</div>
+            <div class="col-1 card-header">Warehouse</div>
+            <div class="col-1 card-header">Start Time</div>
+            <div class="col-1 card-header">End Time</div>
+            <div class="col-1 card-header">Total Duration</div>
+        </div>
+        {% for item in queries %}
+        <div class="row sql"  onclick="showSQL(this)">
+            <div class="col-2">{{item['EXECUTION_STATUS']}}</div>
+            <div class="col-5">{{item['QUERY_TEXT']}}</div>
+            <div class="col-1">{{item['USER_NAME']}}</div>
+            <div class="col-1">{{item['WAREHOUSE_NAME']}}</div>
+            <div class="col-1">{{item['START_TIME']}}</div>
+            <div class="col-1">{{item['END_TIME']}}</div>
+            <div class="col-1">{{item['TOTAL_ELAPSED_TIME']}}</div>
+        </div>
+        {% endfor %}
+    </div>
+  </body>
+</html>
+
+<script>
+function showSQL(item) {
+    alert(item.getElementsByClassName("col-5")[0].innerHTML)
+}
+</script>
