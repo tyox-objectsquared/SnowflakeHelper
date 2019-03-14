@@ -1,2 +1,4 @@
 venv/*
 .idea/*
+webapp/node_modules/*
+webapp/.idea/*

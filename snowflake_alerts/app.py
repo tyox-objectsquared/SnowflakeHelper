@@ -49,13 +49,11 @@ def logout_p():
 
 
 @app.route('/queries', methods=['GET'])
-@login_required
 def query_history():
     return query_user_history(None)
 
 
 @app.route('/queries/<username>', methods=['GET'])
-@login_required
 def query_user_history(username):
     minutes = 30
     ongoing_queries_only = False
@@ -63,15 +61,11 @@ def query_user_history(username):
         minutes =  request.args.get('minutes')
     if request.args.get('show_ongoing') != None:
         ongoing_queries_only = request.args.get('show_ongoing')
-    sao =  sa.SnowflakeAccess(PILOT_USERNAME, PILOT_PASSWORD, PILOT_ACCOUNT)
-    return render_template('queries.html',
-                           username=username,
-                           num_minutes=minutes,
-                           queries=sao.query_user_history(username=username,num_minutes=minutes, ongoing_only=ongoing_queries_only))
+    sao = sa.SnowflakeAccess(PILOT_USERNAME, PILOT_PASSWORD, PILOT_ACCOUNT)
+    return sao.query_user_history(username=username,num_minutes=minutes, ongoing_only=ongoing_queries_only)
 
 
 @app.route('/')
-@login_required
 def welcome():
     return render_template('welcome.html')  # render a template
 
