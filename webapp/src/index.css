@@ -12,3 +12,28 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+
+.list {
+  box-shadow: 1px 1px 1px 1px #cccccc;
+}
+
+.table-header {
+  color: white;
+  background-color: #6c757d;
+  padding: 8px 0 8px 0;
+  border-radius: 2px;
+}
+
+.selected-table-row {
+  background-color: #eff8ff !important;
+}
+
+.table-row:nth-child(odd) {
+  background: #ddeef6;
+}
+
+.table-row > div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

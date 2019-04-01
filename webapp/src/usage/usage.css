@@ -1,6 +1,12 @@
-.container-fluid {
-    height: 300px;
+.dropdown, .dropdown-menu, .dropdown-toggle {
+    width: 100%;
 }
-.k-chart {
-    height: 100%;
+
+.search-icon {
+    cursor: pointer;
 }
+
+.search-icon:hover {
+    background-color: #eff8ff;
+}
+

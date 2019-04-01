@@ -1,3 +1,4 @@
-.card-header {
-    text-align: center;
+.table-row:hover {
+    cursor: pointer;
+    background-color: #61dafb;
 }
