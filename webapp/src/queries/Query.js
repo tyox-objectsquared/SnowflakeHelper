@@ -1,6 +1,7 @@
 export class Query {
-    constructor(execution_status, sql_text, username, error_code,
+    constructor(query_id, execution_status, sql_text, username, error_code,
                 error_message, start_time, end_time, total_elapsed_time) {
+        this.query_id = query_id;
         this.execution_status = execution_status;
         this.sql_text = sql_text;
         this.username = username;

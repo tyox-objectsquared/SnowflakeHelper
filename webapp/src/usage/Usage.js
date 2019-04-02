@@ -15,6 +15,7 @@ import {
     ChartTooltip
 } from '@progress/kendo-react-charts';
 import 'hammerjs';
+import ReactTooltip from "react-tooltip";
 const request = require('request');
 
 
@@ -49,6 +50,9 @@ class Usage extends Component {
                     selectedDate: null
                 });
             }
+            else {
+                this.setState({loading: false, error: error.toString()})
+            }
         });
     }
 
@@ -56,7 +60,23 @@ class Usage extends Component {
         this.setState({selectedMode: mode});
     }
 
-    renderSelector = (months, current_month) => {
+    renderSelector = (months: [], current_month) => {
+        if ('error' in this.state) {
+            return (
+                <div className="row table-row">
+                    <div className="col" data-tip={this.state.error}>{ this.state.error }</div>
+                    <ReactTooltip html={true} effect="solid" type="error" delayShow={500} />
+                </div>
+            )
+        }
+        if (months.length === 0) {
+            return (
+                <div className="row table-row">
+                    <div className="col" data-tip={"There is no usage data to display."}>There is no usage data to display.</div>
+                    <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                </div>
+            )
+        }
         return (
             <div className="dropdown">
                 <button className="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
@@ -72,6 +92,7 @@ class Usage extends Component {
 
     renderList = (dailyData, month, selectedDate) => {
         return Object.entries(dailyData).map(([date, data]) => {
+            let hasPieChart = 'users' in data; //boolean
             return (
                 <div className={"row table-row " + (date === selectedDate ? "selected-table-row " : "") + ( data['credits'] !== 0 ? "search-icon " : "")}
                      key={month+"/"+date} onClick={data['credits'] !== 0 ? ()=>this.setState({selectedDate: date}): null}>
@@ -79,27 +100,32 @@ class Usage extends Component {
                     <div key={date} className="col-8">{data['credits']}
                     {data['credits'] !== 0 ?<Octicon icon={Search} />: null}
                     {data['credits'] !== 0 && 'users' in data ?<Octicon icon={Info} />: null}</div>
-                    <div className="row">{selectedDate === date ? this.renderLineChart(Object.values(data['interval']), month.split(",")[0] + " " + date) : null}</div>
-                    <div className="row">{selectedDate === date && 'users' in data ? this.renderPieChart(data['users']) : null}</div>
+                    <div className="row">{selectedDate === date ? this.renderLineChart(Object.values(data['interval']), month.split(",")[0] + " " + date, hasPieChart) : null}</div>
+                    <div className="row">{selectedDate === date && hasPieChart ? this.renderPieChart(data['users']) : null}</div>
                 </div>
             )
         });
     };
 
 
-    renderLineChart = (intervalData: [], date: string) => (
-        <Chart zoomable={false}>
-            <ChartTitle text={"Usage on " + date} />
-            <ChartTooltip format="{0}" />
-            <ChartArea background={"#eff8ff"} width={document.getElementById("table-fragment").offsetWidth-585}  height={400}/>
-            <ChartCategoryAxis>
-                <ChartCategoryAxisItem title={{ text: 'Hour'}} categories={["12a",1,2,3,4,5,6,7,8,9,10,11,"12p",1,2,3,4,5,6,7,8,9,10,11]} />
-            </ChartCategoryAxis>
-            <ChartSeries>
-                <ChartSeriesItem color="#07425E" type="line" data={intervalData} />
-            </ChartSeries>
-        </Chart>
-    );
+    renderLineChart = (intervalData: [], date: string, hasPieChart: boolean) => {
+        let offset = 35;
+        if (hasPieChart) offset = 485;
+        return (
+            <Chart zoomable={false}>
+                <ChartTitle text={"Usage on " + date} />
+                <ChartTooltip format="{0}" />
+                <ChartArea background={"#eff8ff"} width={document.getElementById("table-fragment").offsetWidth-offset}  height={400}/>
+                <ChartCategoryAxis>
+                    <ChartCategoryAxisItem title={{ text: 'Hour'}} categories={["12a",1,2,3,4,5,6,7,8,9,10,11,"12p",1,2,3,4,5,6,7,8,9,10,11]} />
+                </ChartCategoryAxis>
+                <ChartSeries>
+                    <ChartSeriesItem color="#07425E" type="line" data={intervalData} />
+                </ChartSeries>
+            </Chart>
+            );
+    };
+
 
     renderPieChart = (data: {}) => {
         //Transform the data into the proper format

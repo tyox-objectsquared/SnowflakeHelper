@@ -57,7 +57,6 @@ def metering_history():
 
 @app.route('/queries', methods=['GET'])
 def query_history():
-    #return '[{"QUERY_TEXT": "select query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from table( snowflake.information_schema.query_history( end_time_range_start=> dateadd(\'minutes\', -30, current_timestamp()))) order by start_time", "USER_NAME": "ALERTS_PILOT", "WAREHOUSE_NAME": "SEDC_WH", "EXECUTION_STATUS": "SUCCESS", "ERROR_CODE": null, "ERROR_MESSAGE": null, "START_TIME": "2018-03-26 17:16:31.986000-04:00", "END_TIME": "2019-03-26 17:16:32.953000-04:00", "TOTAL_ELAPSED_TIME": "0.967s"}, {"QUERY_TEXT": "select query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from table( snowflake.information_schema.query_history( end_time_range_start=> dateadd(\'minutes\', -30, current_timestamp()))) order by start_time", "USER_NAME": "ALERTS_PILOT", "WAREHOUSE_NAME": "SEDC_WH", "EXECUTION_STATUS": "SUCCESS", "ERROR_CODE": null, "ERROR_MESSAGE": null, "START_TIME": "2019-03-26 17:17:27.495000-04:00", "END_TIME": "2019-03-26 17:17:27.902000-04:00", "TOTAL_ELAPSED_TIME": "0.407s"}, {"QUERY_TEXT": "select query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from table( snowflake.information_schema.query_history( end_time_range_start=> dateadd(\'minutes\', -30, current_timestamp()))) order by start_time", "USER_NAME": "ALERTS_PILOT", "WAREHOUSE_NAME": "SEDC_WH", "EXECUTION_STATUS": "RUNNING", "ERROR_CODE": null, "ERROR_MESSAGE": null, "START_TIME": "2019-03-26 17:18:45.611000-04:00", "END_TIME": "2019-03-26 17:18:45.611000-04:00", "TOTAL_ELAPSED_TIME": "0.0s"}]'
     args_map = {}
     if request.args.get('minutes') != None:
         args_map['num_minutes'] =  request.args.get('minutes')
@@ -65,6 +64,11 @@ def query_history():
         args_map['ongoing_only'] = request.args.get('show_ongoing')
     sao = sa.SnowflakeAccess(PILOT_USERNAME, PILOT_PASSWORD, PILOT_ACCOUNT)
     return json.dumps(sao.query_user_history(**args_map), default=str)
+
+@app.route('/queries/stop/<id>', methods=['POST', 'GET'])
+def stop_query(id):
+    sao = sa.SnowflakeAccess(PILOT_USERNAME, PILOT_PASSWORD, PILOT_ACCOUNT)
+    return json.dumps(sao.stop_query(id), default=str)
 
 @app.route('/')
 def welcome():

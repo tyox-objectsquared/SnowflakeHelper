@@ -43,6 +43,7 @@ class Queries extends Component {
                 const queries = [];
                 for (var i=0; i < data.length; ++i) {
                     queries.push(new Query(
+                        data[i].QUERY_ID,
                         data[i].EXECUTION_STATUS,
                         data[i].QUERY_TEXT,
                         data[i].USER_NAME,
@@ -53,6 +54,9 @@ class Queries extends Component {
                         data[i].TOTAL_ELAPSED_TIME));
                 }
                 this.setState({loading: false, queryData: queries});
+            } else {
+                console.log(error);
+                this.setState({loading: false, error: error.toString()})
             }
         });
     };
@@ -68,6 +72,22 @@ class Queries extends Component {
     }
 
     renderQueries = (queryData: Query[]) => {
+        if ('error' in this.state) {
+            return (
+                <div className="row table-row">
+                    <div className="col" data-tip={this.state.error}>{ this.state.error }</div>
+                    <ReactTooltip html={true} effect="solid" type="error" delayShow={500} />
+                </div>
+            )
+        }
+        if (queryData.length === 0) {
+            return (
+                <div className="row table-row">
+                    <div className="col" data-tip={"There are no queries from the past 30 minutes."}>There are no queries from the past 30 minutes.</div>
+                    <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                </div>
+            )
+        }
         return queryData.map((query) => {
             let formatted_status = this.statusMap[query.execution_status].text;
             if (query.execution_status === "FAILED_WITH_ERROR") {
@@ -76,21 +96,47 @@ class Queries extends Component {
             let formatted_sql: string = sqlFormatter.format(query.sql_text);
             formatted_sql = formatted_sql.replace(/(?:\r\n|\r|\n)/g, '<br>');
             return (
-                <div key={query.start_time} className="row table-row">
-                    <div className="col-1">
-                        <div style={{width: "30px", color: this.statusMap[query.execution_status].color}} data-tip={"<div>" + formatted_status + "</div>"}><Octicon icon={this.statusMap[query.execution_status].icon} /></div>
-                        <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                <div key={query.query_id} className="row table-row">
+                    <div className="col-1 status">
+                        <div  style={{width: "30px", color: this.statusMap[query.execution_status].color}} data-tip={"<div>" + formatted_status + "</div>"}><Octicon icon={this.statusMap[query.execution_status].icon} /></div>
+                        <div>{formatted_status === "Running" ? <div onClick={() => this.stop_query(query.query_id)} style={{"height": "27px", "paddingTop": 0, "paddingBottom": 0, "cursor": "pointer"}} className={"btn btn-danger"}>Stop</div> : null}</div>
                     </div>
                     <div className="col-4 sql" data-tip={"<div>" + formatted_sql +"</div>"} >{query.sql_text}</div>
                     <div className="col-1" data-tip={"<div>" + query.username + "</div>"}>{query.username}</div>
                     <div className="col-2" data-tip={"<div>" + query.start_time + "</div>"}>{query.start_time}</div>
                     <div className="col-2" data-tip={"<div>" + query.end_time + "</div>"}>{query.end_time}</div>
                     <div className="col-1" data-tip={"<div>" + query.total_elapsed_time + "</div>"}>{query.total_elapsed_time}</div>
+                    <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
                 </div>
-
             );
         });
     };
+
+
+    stop_query(id: string) {
+        request.post({
+            url: "http://localhost:5000/queries/stop/" + id,
+            headers: {'content-type': 'application/json'}
+        }, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                const data = JSON.parse(body);
+                let queries = this.state.queryData;
+                for (let i=0; i< queries.length; ++i) {
+                    if (queries[i].query_id === id) {
+                        queries[i].execution_status = data['status'];
+                        if (data['message'] !== 'Identified SQL statement is not currently executing.') {
+                            queries[i].error_message =  data['error_message'];
+                            queries[i].error_code = data['error_code'];
+                            queries[i].start_time = Queries.formatDateTime(new Date(data['start_time']));
+                            queries[i].end_time = Queries.formatDateTime(new Date(data['end_time']));
+                        }
+                    }
+                }
+                this.setState({queryData: queries});
+            }
+        });
+    }
+
 
     render() {
         const { loading, queryData} = this.state;

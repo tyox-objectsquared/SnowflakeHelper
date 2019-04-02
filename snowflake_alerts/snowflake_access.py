@@ -158,9 +158,9 @@ class SnowflakeAccess:
         history = []
         try:
             cur.execute("select user_name, start_time, total_elapsed_time from "
-                        "table( snowflake.information_schema.query_history( "
-                        "end_time_range_start=> to_timestamp_ltz(\'{0}\'),"
-                        "end_time_range_end=> to_timestamp_ltz(\'{1}\') )) "
+                        "table(snowflake.information_schema.query_history("
+                        "end_time_range_start=> to_timestamp_ltz(\'{0}\'), "
+                        "end_time_range_end=> to_timestamp_ltz(\'{1}\'))) "
                         "order by start_time".format(start_date.strftime("%Y-%m-%d %H:%M:%S %z"), end_date.strftime("%Y-%m-%d %H:%M:%S %z")))
             for rec in cur:
                 # Data Transformations
@@ -171,16 +171,15 @@ class SnowflakeAccess:
         return history
 
 
-    def query_user_history(self, start_date=datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(minutes=30),
-                           end_date=datetime.datetime.now(timezone("US/Eastern")), ongoing_only=False): # Defaults to all queries in the last 30 minutes
+    def query_user_history(self, start_date=datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(minutes=30), ongoing_only=False): # Defaults to all queries in the last 30 minutes
         cur = self.inst.connection.cursor(DictCursor)
         history = []
         try:
-            cur.execute("select query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from "
-                        "table( snowflake.information_schema.query_history( "
-                        "end_time_range_start=> to_timestamp_ltz(\'{0}\'),"
-                        "end_time_range_end=> to_timestamp_ltz(\'{1}\') )) "
-                        "order by start_time".format(start_date.strftime("%Y-%m-%d %H:%M:%S %z"), end_date.strftime("%Y-%m-%d %H:%M:%S %z")))
+            cur.execute("select query_id, query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from "
+                        "table(snowflake.information_schema.query_history("
+                        "end_time_range_start=> to_timestamp_ltz(\'{0}\'))) "
+                        "where user_name not like \'%ALERTS%\'"
+                        "order by start_time".format(start_date.strftime("%Y-%m-%d %H:%M:%S %z")))
             for rec in cur:
                 # Data Transformations
                 rec['START_TIME'] = rec['START_TIME'].astimezone(timezone("US/Eastern"))
@@ -207,4 +206,21 @@ class SnowflakeAccess:
             print(e0.msg)
         history.reverse()
         return history
+
+    def stop_query(self, id):
+        message = self.inst.connection.cursor().execute("select system$cancel_query(\'{0}\')".format(id)).fetchone()
+        if message[0] != 'Identified SQL statement is not currently executing.':
+            status, error_message, error_code, start_time, end_time = self.inst.connection.cursor().execute(
+                "select execution_status, error_message, error_code, start_time, end_time from "
+                "table(snowflake.information_schema.query_history("
+                "end_time_range_start=> to_timestamp_ltz(\'{0}\'))) "
+                "where query_id = \'{1}\'"
+                .format(datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(minutes=1), id)).fetchone()
+            obj = {'id': id, 'status': status, 'message': message[0], 'start_time': start_time, 'end_time': end_time}
+            if error_message is not None:
+                obj['error_message'] = error_message
+                obj['error_code'] = error_code
+            return obj
+        else:
+            return {'id': id, 'status': 'SUCCESS', 'message': message[0]}
 
