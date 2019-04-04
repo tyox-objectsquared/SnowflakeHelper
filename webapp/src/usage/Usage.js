@@ -1,6 +1,6 @@
 import React, {Component} from 'react';
 import './usage.css';
-import NavBar from "../Nav";
+import NavBar from "../nav/Nav";
 import './UsageEntry';
 import Octicon, {Search, Info} from '@githubprimer/octicons-react';
 import {
@@ -16,6 +16,7 @@ import {
 } from '@progress/kendo-react-charts';
 import 'hammerjs';
 import ReactTooltip from "react-tooltip";
+import {auth} from '../index'
 const request = require('request');
 
 
@@ -34,11 +35,11 @@ class Usage extends Component {
     };
 
 
-    componentDidMount(): void {
+    componentDidMount(): void { //private - requires authorization
         window.addEventListener('resize', this.handleResize);
         request.get({
             url: "http://localhost:5000/metering",
-            headers: {'content-type': 'application/json'}
+            headers: {'content-type': 'application/json', 'Authorization': auth.authorizationHeader}
         }, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 const data = JSON.parse(body);
@@ -51,6 +52,7 @@ class Usage extends Component {
                 });
             }
             else {
+                if (error === null) error = response.statusCode + ": " + response.statusMessage;
                 this.setState({loading: false, error: error.toString()})
             }
         });

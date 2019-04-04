@@ -1,9 +1,13 @@
 import snowflake.connector
-import datetime
 from snowflake.connector import DictCursor
+import datetime
 from pytz import timezone
 from operator import itemgetter
 
+class User:
+    def __init__(self, username, account_name):
+        self.username = username
+        self.account_name = account_name
 
 class SnowflakeAccess:
 
@@ -13,11 +17,12 @@ class SnowflakeAccess:
         def __init__(self, username, password, account_name):
             try:
                 self.connection = snowflake.connector.connect(user=username, password=password, account=account_name)
-            except snowflake.connector.errors.DatabaseError as e0:
-                print(e0.msg)
-            self.username = username
-            self.account_name = account_name
-            self.region = account_name.split(".")[1]
+                self.username = username
+                self.account_name = account_name
+                self.region = account_name.split(".")[1]
+            except snowflake.connector.errors.DatabaseError:
+                self.connection = None
+                raise
         def __str__(self):
             return repr(self) + "\n\tusername: " + self.username + "\n\taccount: " + self .account_name
 
@@ -28,17 +33,25 @@ class SnowflakeAccess:
         else:
             try:
                 SnowflakeAccess.inst.connection = snowflake.connector.connect(user=username, password=password, account=account_name)
-            except snowflake.connector.errors.DatabaseError as e0:
-                print(e0.msg)
+            except snowflake.connector.errors.DatabaseError:
+                raise
     def __getattr__(self, name):
         return getattr(self.inst, name)
-
 
     def close(self):
         self.inst.connection.close()
 
     def cancel_query(self, id):
         self.inst.connection.cursor().execute("select system$cancel_query({0});".format(id))
+
+    def coops(self, coops_table_name, wh_name):
+        cur = self.inst.connection.cursor(DictCursor)
+        cur.execute("use warehouse {0}".format(wh_name))
+        cur.execute("select coop_name, account_name from {0}".format(coops_table_name))
+        coops = {}
+        for rec in cur:
+            coops[rec['COOP_NAME']] = rec['ACCOUNT_NAME']
+        return coops
 
     def metering_history(self):
         cur = self.inst.connection.cursor(DictCursor)

@@ -1,10 +1,11 @@
 import React, {Component, Fragment} from 'react';
 import './queries.css';
 import {Query} from './Query';
-import NavBar from "../Nav";
+import NavBar from "../nav/Nav";
 import Octicon, {Check, Sync, IssueOpened, Shield, ListUnordered, Ellipsis} from '@githubprimer/octicons-react';
 import ReactTooltip from 'react-tooltip'
 import sqlFormatter from "sql-formatter";
+import {auth} from '../index'
 const request = require('request');
 
 class Queries extends Component {
@@ -33,10 +34,10 @@ class Queries extends Component {
         this.getQueries();
     }
 
-    getQueries = () => {
+    getQueries = () => { //private - requires authorization
         request.get({
             url: "http://localhost:5000/queries",
-            headers: {'content-type': 'application/json'}
+            headers: {'content-type': 'application/json', 'Authorization': auth.authorizationHeader}
         }, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 const data = JSON.parse(body);
@@ -55,11 +56,38 @@ class Queries extends Component {
                 }
                 this.setState({loading: false, queryData: queries});
             } else {
-                console.log(error);
+                if (error === null) error = response.statusCode + ": " + response.statusMessage;
                 this.setState({loading: false, error: error.toString()})
             }
         });
     };
+
+    stop_query(id: string) { //private - requires authorization
+        request.post({
+            url: "http://localhost:5000/queries/stop/" + id,
+            headers: {'content-type': 'application/json', 'Authorization': auth.authorizationHeader}
+        }, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                const data = JSON.parse(body);
+                let queries = this.state.queryData;
+                for (let i=0; i< queries.length; ++i) {
+                    if (queries[i].query_id === id) {
+                        queries[i].execution_status = data['status'];
+                        if (data['message'] !== 'Identified SQL statement is not currently executing.') {
+                            queries[i].error_message =  data['error_message'];
+                            queries[i].error_code = data['error_code'];
+                            queries[i].start_time = Queries.formatDateTime(new Date(data['start_time']));
+                            queries[i].end_time = Queries.formatDateTime(new Date(data['end_time']));
+                        }
+                    }
+                }
+                this.setState({queryData: queries});
+            } else {
+                if (error === null) error = response.statusCode + ": " + response.statusMessage;
+                this.setState({loading: false, error: error.toString()})
+            }
+        });
+    }
 
     static formatDateTime(date: Date) {
         let date_string = "";
@@ -111,32 +139,6 @@ class Queries extends Component {
             );
         });
     };
-
-
-    stop_query(id: string) {
-        request.post({
-            url: "http://localhost:5000/queries/stop/" + id,
-            headers: {'content-type': 'application/json'}
-        }, (error, response, body) => {
-            if (!error && response.statusCode === 200) {
-                const data = JSON.parse(body);
-                let queries = this.state.queryData;
-                for (let i=0; i< queries.length; ++i) {
-                    if (queries[i].query_id === id) {
-                        queries[i].execution_status = data['status'];
-                        if (data['message'] !== 'Identified SQL statement is not currently executing.') {
-                            queries[i].error_message =  data['error_message'];
-                            queries[i].error_code = data['error_code'];
-                            queries[i].start_time = Queries.formatDateTime(new Date(data['start_time']));
-                            queries[i].end_time = Queries.formatDateTime(new Date(data['end_time']));
-                        }
-                    }
-                }
-                this.setState({queryData: queries});
-            }
-        });
-    }
-
 
     render() {
         const { loading, queryData} = this.state;
