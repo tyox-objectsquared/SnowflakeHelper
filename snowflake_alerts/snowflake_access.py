@@ -16,7 +16,7 @@ class SnowflakeAccess:
     class __SAO:  #snowflake access object, private
         def __init__(self, username, password, account_name):
             try:
-                self.connection = snowflake.connector.connect(user=username, password=password, account=account_name)
+                self.connection = snowflake.connector.connect(user=username, password=password, account=account_name, login_timeout=5)
                 self.username = username
                 self.account_name = account_name
                 self.region = account_name.split(".")[1]
@@ -184,8 +184,9 @@ class SnowflakeAccess:
         return history
 
 
-    def query_user_history(self, start_date=datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(minutes=30), ongoing_only=False): # Defaults to all queries in the last 30 minutes
+    def query_user_history(self, num_minutes=30, ongoing_only=False): # Defaults to all queries in the last 30 minutes
         cur = self.inst.connection.cursor(DictCursor)
+        start_date = datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(minutes=num_minutes)
         history = []
         try:
             cur.execute("select query_id, query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from "
@@ -236,4 +237,3 @@ class SnowflakeAccess:
             return obj
         else:
             return {'id': id, 'status': 'SUCCESS', 'message': message[0]}
-
