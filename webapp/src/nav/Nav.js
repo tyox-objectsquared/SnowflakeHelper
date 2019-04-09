@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import './nav.css';
 import {NavLink} from "react-router-dom";
-
+import App from '../App';
 class NavBar extends Component {
 
     render() {
@@ -17,6 +17,7 @@ class NavBar extends Component {
                     <ul className="navbar-nav mr-auto">
                         <li className="nav-item"><NavLink className="nav-link" to='/queries'>Queries</NavLink></li>
                         <li className="nav-item"><NavLink className="nav-link" to='/usage'>Usage</NavLink></li>
+                        {App.authService.isAuthenticated ? <li className="nav-item"><NavLink onClick={() => App.authService.logout(null)} className="nav-link" to='/login'>Logout</NavLink></li> : null }
                     </ul>
                 </div>
             </nav>
