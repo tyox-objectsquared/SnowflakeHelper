@@ -16,8 +16,8 @@ import {
 } from '@progress/kendo-react-charts';
 import 'hammerjs';
 import ReactTooltip from "react-tooltip";
-import {auth} from '../index'
-const request = require('request');
+import {withRouter} from 'react-router-dom';
+import API from '../api/API';
 
 
 class Usage extends Component {
@@ -37,12 +37,11 @@ class Usage extends Component {
 
     componentDidMount(): void { //private - requires authorization
         window.addEventListener('resize', this.handleResize);
-        request.get({
-            url: "http://localhost:5000/metering",
-            headers: {'content-type': 'application/json', 'Authorization': auth.authorizationHeader}
-        }, (error, response, body) => {
-            if (!error && response.statusCode === 200) {
-                const data = JSON.parse(body);
+        const api = new API();
+        api.getHTTP("http://localhost:5000/metering", (data, statusCode) => { //getUsage
+            if (statusCode === 401) this.props.history.push('/login');
+            else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
+            else {
                 this.setState({
                     loading: false,
                     dailyData: data,
@@ -51,16 +50,9 @@ class Usage extends Component {
                     selectedDate: null
                 });
             }
-            else {
-                if (error === null) error = response.statusCode + ": " + response.statusMessage;
-                this.setState({loading: false, error: error.toString()})
-            }
         });
     }
 
-    setMode(mode): void {
-        this.setState({selectedMode: mode});
-    }
 
     renderSelector = (months: [], current_month) => {
         if ('error' in this.state) {
@@ -166,4 +158,4 @@ class Usage extends Component {
         )
     }
 }
-export default Usage;
+export default withRouter(Usage);

@@ -5,9 +5,8 @@ import NavBar from "../nav/Nav";
 import Octicon, {Check, Sync, IssueOpened, Shield, ListUnordered, Ellipsis} from '@githubprimer/octicons-react';
 import ReactTooltip from 'react-tooltip'
 import sqlFormatter from "sql-formatter";
-import {auth} from '../index'
-const request = require('request');
-
+import {withRouter} from 'react-router-dom';
+import API from '../api/API';
 class Queries extends Component {
 
     statusMap = {
@@ -35,12 +34,11 @@ class Queries extends Component {
     }
 
     getQueries = () => { //private - requires authorization
-        request.get({
-            url: "http://localhost:5000/queries",
-            headers: {'content-type': 'application/json', 'Authorization': auth.authorizationHeader}
-        }, (error, response, body) => {
-            if (!error && response.statusCode === 200) {
-                const data = JSON.parse(body);
+        const api = new API();
+        api.getHTTP("http://localhost:5000/queries", (data, statusCode: number) => {
+            if (statusCode === 401) this.props.history.push('/login');
+            else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
+            else {
                 const queries = [];
                 for (var i=0; i < data.length; ++i) {
                     queries.push(new Query(
@@ -55,20 +53,17 @@ class Queries extends Component {
                         data[i].TOTAL_ELAPSED_TIME));
                 }
                 this.setState({loading: false, queryData: queries});
-            } else {
-                if (error === null) error = response.statusCode + ": " + response.statusMessage;
-                this.setState({loading: false, error: error.toString()})
             }
         });
     };
 
+
     stop_query(id: string) { //private - requires authorization
-        request.post({
-            url: "http://localhost:5000/queries/stop/" + id,
-            headers: {'content-type': 'application/json', 'Authorization': auth.authorizationHeader}
-        }, (error, response, body) => {
-            if (!error && response.statusCode === 200) {
-                const data = JSON.parse(body);
+        const api = new API();
+        api.postHTTP("http://localhost:5000/queries/stop/" + id, null, (data, statusCode) => {
+            if (statusCode === 401) this.props.history.push('/login');
+            else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
+            else {
                 let queries = this.state.queryData;
                 for (let i=0; i< queries.length; ++i) {
                     if (queries[i].query_id === id) {
@@ -82,9 +77,6 @@ class Queries extends Component {
                     }
                 }
                 this.setState({queryData: queries});
-            } else {
-                if (error === null) error = response.statusCode + ": " + response.statusMessage;
-                this.setState({loading: false, error: error.toString()})
             }
         });
     }
@@ -92,7 +84,8 @@ class Queries extends Component {
     static formatDateTime(date: Date) {
         let date_string = "";
         const today: Date = new Date();
-        if (date.getFullYear() !== today.getFullYear() || date.getMonth() !== today.getMonth() || date.getDate() !== today.getDate()) {
+        if ((date.getFullYear() !== today.getFullYear() || date.getMonth() !== today.getMonth())
+            || date.getDate() !== today.getDate()) {
             date_string += date.toLocaleDateString("en-US") + " ";
         }
         date_string += date.toLocaleTimeString("en-US");
@@ -162,4 +155,4 @@ class Queries extends Component {
     }
 }
 
-export default Queries;
+export default withRouter(Queries);
