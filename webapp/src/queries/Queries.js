@@ -19,23 +19,35 @@ class Queries extends Component {
         "SUCCESS": {icon: Check, text: "Success", color: "Green" }
     };
 
+    intervalsMap = {
+        15: "15 minutes",
+        30: "30 minutes",
+        60: "1 hour",
+        120: "2 hours",
+        240: "4 hours",
+        480: "8 hours",
+        720: "12 hours",
+        1440: "24 hours"
+    };
+
     constructor(props) {
         super(props);
-        this.state = {loading: true, queryData: null};
+        this.state = {loading: true, queryData: null, numMinutes: 30, queriedMinutes: 30};
     }
 
     componentDidMount(): void {
-        this.getQueries();
+        this.getQueries(this.state.numMinutes);
     }
 
     update(): void {
         this.setState({loading: true, queryData: null});
-        this.getQueries();
+        this.getQueries(this.state.numMinutes);
     }
 
-    getQueries = () => { //private - requires authorization
+    getQueries = (numMinutes) => { //private - requires authorization
+        this.setState({queriedMinutes: numMinutes});
         const api = new API();
-        api.getHTTP("http://localhost:5000/queries", (data, statusCode: number) => {
+        api.getHTTP("http://localhost:5000/queries?numMinutes="+numMinutes, (data, statusCode: number) => {
             if (statusCode === 401) this.props.history.push('/login');
             else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
             else {
@@ -60,7 +72,7 @@ class Queries extends Component {
 
     stop_query(id: string) { //private - requires authorization
         const api = new API();
-        api.postHTTP("http://localhost:5000/queries/stop/" + id, null, (data, statusCode) => {
+        api.postHTTP("http://localhost:5000/queries/stop?id=" + id, null, (data, statusCode) => {
             if (statusCode === 401) this.props.history.push('/login');
             else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
             else {
@@ -102,12 +114,22 @@ class Queries extends Component {
             )
         }
         if (queryData.length === 0) {
-            return (
-                <div className="row table-row">
-                    <div className="col" data-tip={"There are no queries from the past 30 minutes."}>There are no queries from the past 30 minutes.</div>
-                    <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
-                </div>
-            )
+            const {numMinutes, queriedMinutes} = this.state;
+            if (numMinutes === queriedMinutes) {
+                return (
+                    <div className="row table-row">
+                        <div className="col" data-tip={"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}>{"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}</div>
+                        <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                    </div>
+                )
+            } else {
+                return (
+                    <div className="row table-row">
+                        <div className="col" data-tip={"Press Refresh to see queries within a different interval."}>Press Refresh to see queries within a different interval.</div>
+                        <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                    </div>
+                )
+            }
         }
         return queryData.map((query) => {
             let formatted_status = this.statusMap[query.execution_status].text;
@@ -134,14 +156,21 @@ class Queries extends Component {
     };
 
     render() {
-        const { loading, queryData} = this.state;
+        const { loading, queryData, numMinutes} = this.state;
         return (
             <div className="container-fluid">
                 <NavBar/>
                 <div className="list container-fluid">
                     <div className="row table-header">
                         <div className="col-1">Status</div>
-                        <div className="col-4">SQL Text</div>
+                        <div className="col-2">SQL Text</div>
+                        <div className="col-2 dropdown">
+                            <button style={{padding: "0 15px 0 15px"}} className="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
+                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{this.intervalsMap[numMinutes]}</button>
+                            <div className="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                {Object.entries(this.intervalsMap).map(([numMins, interval]) => <div key={numMins} onClick={()=>this.setState({numMinutes: numMins})} className="dropdown-item">{interval}</div>)}
+                            </div>
+                        </div>
                         <div className="col-1">User</div>
                         <div className="col-2">Start Time</div>
                         <div className="col-2">End Time</div>

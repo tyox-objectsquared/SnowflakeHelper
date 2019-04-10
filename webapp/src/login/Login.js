@@ -6,20 +6,19 @@ import App from "../App";
 class Login extends Component {
     constructor(props) {
         super(props);
-        this.state = {redirectToReferrer: false, message: App.authService.message, account: "", username: "", password: ""};
+        this.state = {redirectToReferrer: false, account: "", username: "", password: ""};
     }
 
     login = (username, password, account) => {
-        App.authService.authenticate(username, password, account, (isAuthenticated, message) => {
-            if (isAuthenticated) this.setState({redirectToReferrer: true});
-            else this.setState({message: message})
+        App.authService.authenticate(username, password, account, () => {
+            this.setState({redirectToReferrer: App.authService.isAuthenticated === "yes"}); //"yes" or "no"
         });
     };
 
     render() {
         const { from } = this.props.location.state || { from: { pathname: "/usage" } };
-        const { error, redirectToReferrer, account, username, password, message } = this.state;
-        if (redirectToReferrer || App.authService.isAuthenticated === "yes") return <Redirect to={from} />;
+        const { error, redirectToReferrer, account, username, password} = this.state;
+        if (redirectToReferrer) return <Redirect to={from} />;
         return (
             <div className="container-fluid">
                 { error == null ?
@@ -39,7 +38,7 @@ class Login extends Component {
                                 <input onChange={(event) => this.setState({password: event.target.value})} type="password" className="form-control" placeholder="Password" />
                             </div>
                             <button onClick={() => this.login(this.state.username, this.state.password, this.state.account)} disabled={(! /[A-Za-z]{2}\d{5}/.test(account) || username === "") || password === ""} className="btn btn-primary form-group">Submit</button>
-                            {message ? <div className="alert alert-danger">{this.state.message}</div> : null}
+                            {App.authService.message ? <div className="alert alert-danger">{App.authService.message}</div> : null}
                         </div>
                     </div> : <div className="alert alert-danger">Cannot connect to server.</div>}
             </div>

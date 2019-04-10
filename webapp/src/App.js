@@ -9,7 +9,6 @@ import API from './api/API';
 
 class App extends Component {
 
-
     static authService = {
         isAuthenticated: localStorage.getItem('isAuth'),
         authorizationHeader: localStorage.getItem('auth_token'),
@@ -18,18 +17,16 @@ class App extends Component {
             const payload = {username: username, password: password, account: account};
             const api = new API();
             api.postHTTP('http://localhost:5000/login', payload,(data, statusCode) => {
-                if (statusCode === 401) this.props.history.push('/login');
-                else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
-                else {
-                    this.isAuthenticated = data['isAuth'] ? "yes" : "no";
-                    localStorage.setItem('isAuth', this.isAuthenticated);
-                    if (data.hasOwnProperty('auth_token')) {
-                        this.authorizationHeader = data['auth_token'];
-                        this.message = null;
-                        localStorage.setItem('auth_token', this.authorizationHeader);
-                    }
-                    cb(this.isAuthenticated, this.message);
+                if (statusCode === 401 || statusCode === 500) {
+                    this.isAuthenticated = "no";
+                    this.message = data;
                 }
+                else { // statusCode === 200
+                    this.isAuthenticated = "yes";
+                    localStorage.setItem('isAuth', this.isAuthenticated);
+                    this.message = null;
+                }
+                cb();
             });
         },
         logout(message) { //handled locally
