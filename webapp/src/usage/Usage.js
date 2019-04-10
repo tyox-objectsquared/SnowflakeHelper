@@ -72,11 +72,11 @@ class Usage extends Component {
             )
         }
         return (
-            <div className="dropdown">
-                <button className="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
+            <div className="dropdown ">
+                <button className="btn btn-secondary dropdown-toggle w-hundred" type="button" id="dropdownMenuButton"
                         data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{current_month}</button>
-                <div className="dropdown-menu" aria-labelledby="dropdownMenuButton">{
-                    months.map( (month) => {return <div key={month} onClick={()=>this.setState({selectedMonth: month, selectedDate: null})} className="dropdown-item">{month}</div>})
+                <div className="dropdown-menu w-hundred" aria-labelledby="dropdownMenuButton">{
+                    months.map( (month) => {return <div key={month} onClick={()=>this.setState({selectedMonth: month, selectedDate: null})} className="dropdown-item w-hundred">{month}</div>})
                 }
                 </div>
             </div>
