@@ -4,28 +4,29 @@ import datetime
 from pytz import timezone
 from operator import itemgetter
 
-class User:
-    def __init__(self, username, account_name):
-        self.username = username
-        self.account_name = account_name
 
 class SnowflakeAccess:
 
     inst = None
 
     class __SAO:  #snowflake access object, private
-        def __init__(self, username, password, account_name):
+        def __init__(self, login_name, password, account_name):
             try:
-                self.connection = snowflake.connector.connect(user=username, password=password, account=account_name, login_timeout=5)
-                self.username = username
+                self.connection = snowflake.connector.connect(user=login_name, password=password, account=account_name, login_timeout=5)
+                self.login_name = login_name
                 self.account_name = account_name
                 self.region = account_name.split(".")[1]
+                cur = self.connection.cursor(DictCursor)
+                user_name = cur.execute('select current_user()').fetchone()['CURRENT_USER()']
+                cur.execute('desc user {0}'.format(user_name))
+                for rec in cur:
+                    key = rec['property']
+                    value = rec['value']
+                    if value != 'null':
+                        self.__setattr__(key, value)
             except snowflake.connector.errors.DatabaseError:
                 self.connection = None
                 raise
-        def __str__(self):
-            return repr(self) + "\n\tusername: " + self.username + "\n\taccount: " + self .account_name
-
 
     def __init__(self, username, password, account_name):
         if not SnowflakeAccess.inst:
@@ -38,20 +39,16 @@ class SnowflakeAccess:
     def __getattr__(self, name):
         return getattr(self.inst, name)
 
+    def alerts_creds(self):
+        cur = self.inst.connection.cursor()
+        username, password = cur.execute('select * from mdm.etlwhse.alerts').fetchone()
+        return {'username': username, 'password': password, 'account': self.inst.account_name}
+
     def close(self):
         self.inst.connection.close()
 
     def cancel_query(self, id):
         self.inst.connection.cursor().execute("select system$cancel_query({0});".format(id))
-
-    def coops(self, coops_table_name, wh_name):
-        cur = self.inst.connection.cursor(DictCursor)
-        cur.execute("use warehouse {0}".format(wh_name))
-        cur.execute("select coop_name, account_name from {0}".format(coops_table_name))
-        coops = {}
-        for rec in cur:
-            coops[rec['COOP_NAME']] = rec['ACCOUNT_NAME']
-        return coops
 
     def metering_history(self):
         cur = self.inst.connection.cursor(DictCursor)
@@ -184,9 +181,9 @@ class SnowflakeAccess:
         return history
 
 
-    def query_user_history(self, num_minutes=30, ongoing_only=False): # Defaults to all queries in the last 30 minutes
+    def query_user_history(self, numMinutes=30, ongoingOnly=False): # Defaults to all queries in the last 30 minutes
         cur = self.inst.connection.cursor(DictCursor)
-        start_date = datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(minutes=num_minutes)
+        start_date = datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(minutes=int(numMinutes))
         history = []
         try:
             cur.execute("select query_id, query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from "
@@ -211,7 +208,7 @@ class SnowflakeAccess:
                     rec['END_TIME'] = rec['START_TIME']
                 else:
                     rec['TOTAL_ELAPSED_TIME'] = time_string
-                if ongoing_only:
+                if ongoingOnly:
                     if rec['EXECUTION_STATUS'] == 'RESUMING_WAREHOUSE' or rec['EXECUTION_STATUS'] == 'RUNNING' or rec['EXECUTION_STATUS'] == 'QUEUED':
                         history.append(rec)
                 else:
