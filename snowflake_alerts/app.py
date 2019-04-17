@@ -25,9 +25,7 @@ def login():
         sao = sa.SnowflakeAccess(data['username'], data['password'], data['account'])
         is_authorized = hasattr(sao,'connection')
         if is_authorized:
-            # future connections are made with alerts user
-            alerts_creds = sao.alerts_creds()
-            auth_token = encode_auth_token(alerts_creds)
+            auth_token = encode_auth_token({'user': data['username'], 'account': data['account']}) #no need to transfer password anymore
             if auth_token: #return the encoded auth_token
                 return make_response(json.dumps({"data": {"isAuth": True}, "auth_token": auth_token}, default=str), 200)
     except snowflake.connector.errors.DatabaseError as e0:
@@ -44,15 +42,19 @@ def private_request(req, method_name):
         if resp == 'expired': return 'authorization token expired', 401
         if resp == 'invalid': return 'authorization token invalid', 401
         extended_token = extend_auth_token(auth_token)
-        sao = sa.SnowflakeAccess(resp.get('username'), resp.get('password'), resp.get('account'))
+        # CURRENTLY uses accountadmin user
+        sao = sa.SnowflakeAccess(username='SEDCADMIN', password='P@rt41209', account_name=resp.get('account'))
         data = None
-        if method_name == 'metering_history':
-            data = sao.metering_history()
-        elif method_name == 'query_history':
-            data = sao.query_user_history(**req.args)
-        elif method_name == 'stop_query':
-            data = sao.stop_query(**req.args)
-        response = make_response(json.dumps({'data': data, 'auth_token': extended_token}), 200)
+        try:
+            if method_name == 'metering_history':
+                data = sao.metering_history()
+            elif method_name == 'query_history':
+                data = sao.query_user_history(**req.args)
+            elif method_name == 'stop_query':
+                data = sao.stop_query(**req.args)
+        except snowflake.connector.ProgrammingError as e0:
+            return str(e0), 500
+        response = make_response(json.dumps({'data': data, 'auth_token': extended_token}, default=str), 200)
         return response
     else: #no header
         return 'no authorization provided', 401
@@ -73,12 +75,12 @@ def stop_query():
 
 #Helper Methods for jwt
 
-def encode_auth_token(user_id):
+def encode_auth_token(data):
     try:
         payload = {
             'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=5),
             'iat': datetime.datetime.utcnow(),
-            'sub': user_id
+            'sub': data
         }
         return jwt.encode(
             payload,
@@ -113,4 +115,4 @@ def extend_auth_token(auth_token):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(app.run(debug=True, host='0.0.0.0'))
