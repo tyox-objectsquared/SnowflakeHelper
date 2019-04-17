@@ -1,12 +1,12 @@
 import React, {Component, Fragment} from 'react';
 import './queries.css';
 import {Query} from './Query';
-import NavBar from "../Nav";
+import NavBar from "../nav/Nav";
 import Octicon, {Check, Sync, IssueOpened, Shield, ListUnordered, Ellipsis} from '@githubprimer/octicons-react';
 import ReactTooltip from 'react-tooltip'
 import sqlFormatter from "sql-formatter";
-const request = require('request');
-
+import {withRouter} from 'react-router-dom';
+import API from '../api/API';
 class Queries extends Component {
 
     statusMap = {
@@ -19,27 +19,38 @@ class Queries extends Component {
         "SUCCESS": {icon: Check, text: "Success", color: "Green" }
     };
 
+    intervalsMap = {
+        15: "15 minutes",
+        30: "30 minutes",
+        60: "1 hour",
+        120: "2 hours",
+        240: "4 hours",
+        480: "8 hours",
+        720: "12 hours",
+        1440: "24 hours"
+    };
+
     constructor(props) {
         super(props);
-        this.state = {loading: true, queryData: null};
+        this.state = {loading: true, queryData: null, numMinutes: 30, queriedMinutes: 30};
     }
 
     componentDidMount(): void {
-        this.getQueries();
+        this.getQueries(this.state.numMinutes);
     }
 
     update(): void {
         this.setState({loading: true, queryData: null});
-        this.getQueries();
+        this.getQueries(this.state.numMinutes);
     }
 
-    getQueries = () => {
-        request.get({
-            url: "http://localhost:5000/queries",
-            headers: {'content-type': 'application/json'}
-        }, (error, response, body) => {
-            if (!error && response.statusCode === 200) {
-                const data = JSON.parse(body);
+    getQueries = (numMinutes) => { //private - requires authorization
+        this.setState({queriedMinutes: numMinutes});
+        const api = new API();
+        api.getHTTP("http://localhost:5000/queries?numMinutes="+numMinutes, (data, statusCode: number) => {
+            if (statusCode === 401) this.props.history.push('/login');
+            else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
+            else {
                 const queries = [];
                 for (var i=0; i < data.length; ++i) {
                     queries.push(new Query(
@@ -54,17 +65,39 @@ class Queries extends Component {
                         data[i].TOTAL_ELAPSED_TIME));
                 }
                 this.setState({loading: false, queryData: queries});
-            } else {
-                console.log(error);
-                this.setState({loading: false, error: error.toString()})
             }
         });
     };
 
+
+    stop_query(id: string) { //private - requires authorization
+        const api = new API();
+        api.postHTTP("http://localhost:5000/queries/stop?id=" + id, null, (data, statusCode) => {
+            if (statusCode === 401) this.props.history.push('/login');
+            else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
+            else {
+                let queries = this.state.queryData;
+                for (let i=0; i< queries.length; ++i) {
+                    if (queries[i].query_id === id) {
+                        queries[i].execution_status = data['status'];
+                        if (data['message'] !== 'Identified SQL statement is not currently executing.') {
+                            queries[i].error_message =  data['error_message'];
+                            queries[i].error_code = data['error_code'];
+                            queries[i].start_time = Queries.formatDateTime(new Date(data['start_time']));
+                            queries[i].end_time = Queries.formatDateTime(new Date(data['end_time']));
+                        }
+                    }
+                }
+                this.setState({queryData: queries});
+            }
+        });
+    }
+
     static formatDateTime(date: Date) {
         let date_string = "";
         const today: Date = new Date();
-        if (date.getFullYear() !== today.getFullYear() || date.getMonth() !== today.getMonth() || date.getDate() !== today.getDate()) {
+        if ((date.getFullYear() !== today.getFullYear() || date.getMonth() !== today.getMonth())
+            || date.getDate() !== today.getDate()) {
             date_string += date.toLocaleDateString("en-US") + " ";
         }
         date_string += date.toLocaleTimeString("en-US");
@@ -81,12 +114,22 @@ class Queries extends Component {
             )
         }
         if (queryData.length === 0) {
-            return (
-                <div className="row table-row">
-                    <div className="col" data-tip={"There are no queries from the past 30 minutes."}>There are no queries from the past 30 minutes.</div>
-                    <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
-                </div>
-            )
+            const {numMinutes, queriedMinutes} = this.state;
+            if (numMinutes === queriedMinutes) {
+                return (
+                    <div className="row table-row">
+                        <div className="col" data-tip={"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}>{"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}</div>
+                        <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                    </div>
+                )
+            } else {
+                return (
+                    <div className="row table-row">
+                        <div className="col" data-tip={"Press Refresh to see queries within a different interval."}>Press Refresh to see queries within a different interval.</div>
+                        <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                    </div>
+                )
+            }
         }
         return queryData.map((query) => {
             let formatted_status = this.statusMap[query.execution_status].text;
@@ -112,41 +155,22 @@ class Queries extends Component {
         });
     };
 
-
-    stop_query(id: string) {
-        request.post({
-            url: "http://localhost:5000/queries/stop/" + id,
-            headers: {'content-type': 'application/json'}
-        }, (error, response, body) => {
-            if (!error && response.statusCode === 200) {
-                const data = JSON.parse(body);
-                let queries = this.state.queryData;
-                for (let i=0; i< queries.length; ++i) {
-                    if (queries[i].query_id === id) {
-                        queries[i].execution_status = data['status'];
-                        if (data['message'] !== 'Identified SQL statement is not currently executing.') {
-                            queries[i].error_message =  data['error_message'];
-                            queries[i].error_code = data['error_code'];
-                            queries[i].start_time = Queries.formatDateTime(new Date(data['start_time']));
-                            queries[i].end_time = Queries.formatDateTime(new Date(data['end_time']));
-                        }
-                    }
-                }
-                this.setState({queryData: queries});
-            }
-        });
-    }
-
-
     render() {
-        const { loading, queryData} = this.state;
+        const { loading, queryData, numMinutes} = this.state;
         return (
             <div className="container-fluid">
                 <NavBar/>
                 <div className="list container-fluid">
                     <div className="row table-header">
                         <div className="col-1">Status</div>
-                        <div className="col-4">SQL Text</div>
+                        <div className="col-2">SQL Text</div>
+                        <div className="col-2 dropdown">
+                            <button style={{padding: "0 15px 0 15px"}} className="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
+                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{this.intervalsMap[numMinutes]}</button>
+                            <div className="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                {Object.entries(this.intervalsMap).map(([numMins, interval]) => <div key={numMins} onClick={()=>this.setState({numMinutes: numMins})} className="dropdown-item">{interval}</div>)}
+                            </div>
+                        </div>
                         <div className="col-1">User</div>
                         <div className="col-2">Start Time</div>
                         <div className="col-2">End Time</div>
@@ -160,4 +184,4 @@ class Queries extends Component {
     }
 }
 
-export default Queries;
+export default withRouter(Queries);
