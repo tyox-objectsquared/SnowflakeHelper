@@ -1,6 +1,6 @@
 import React, {Component} from 'react';
 import './usage.css';
-import NavBar from "../Nav";
+import NavBar from "../nav/Nav";
 import './UsageEntry';
 import Octicon, {Search, Info} from '@githubprimer/octicons-react';
 import {
@@ -16,7 +16,8 @@ import {
 } from '@progress/kendo-react-charts';
 import 'hammerjs';
 import ReactTooltip from "react-tooltip";
-const request = require('request');
+import {withRouter} from 'react-router-dom';
+import API from '../api/API';
 
 
 class Usage extends Component {
@@ -34,14 +35,13 @@ class Usage extends Component {
     };
 
 
-    componentDidMount(): void {
+    componentDidMount(): void { //private - requires authorization
         window.addEventListener('resize', this.handleResize);
-        request.get({
-            url: "http://localhost:5000/metering",
-            headers: {'content-type': 'application/json'}
-        }, (error, response, body) => {
-            if (!error && response.statusCode === 200) {
-                const data = JSON.parse(body);
+        const api = new API();
+        api.getHTTP("http://localhost:5000/usage", (data, statusCode) => { //getUsage
+            if (statusCode === 401) this.props.history.push('/login');
+            else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
+            else {
                 this.setState({
                     loading: false,
                     dailyData: data,
@@ -50,15 +50,9 @@ class Usage extends Component {
                     selectedDate: null
                 });
             }
-            else {
-                this.setState({loading: false, error: error.toString()})
-            }
         });
     }
 
-    setMode(mode): void {
-        this.setState({selectedMode: mode});
-    }
 
     renderSelector = (months: [], current_month) => {
         if ('error' in this.state) {
@@ -78,11 +72,11 @@ class Usage extends Component {
             )
         }
         return (
-            <div className="dropdown">
-                <button className="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
+            <div className="dropdown ">
+                <button className="btn btn-secondary dropdown-toggle w-hundred" type="button" id="dropdownMenuButton"
                         data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{current_month}</button>
-                <div className="dropdown-menu" aria-labelledby="dropdownMenuButton">{
-                    months.map( (month) => {return <div key={month} onClick={()=>this.setState({selectedMonth: month, selectedDate: null})} className="dropdown-item">{month}</div>})
+                <div className="dropdown-menu w-hundred" aria-labelledby="dropdownMenuButton">{
+                    months.map( (month) => {return <div key={month} onClick={()=>this.setState({selectedMonth: month, selectedDate: null})} className="dropdown-item w-hundred">{month}</div>})
                 }
                 </div>
             </div>
@@ -164,4 +158,4 @@ class Usage extends Component {
         )
     }
 }
-export default Usage;
+export default withRouter(Usage);

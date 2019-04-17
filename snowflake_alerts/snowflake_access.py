@@ -1,6 +1,6 @@
 import snowflake.connector
-import datetime
 from snowflake.connector import DictCursor
+import datetime
 from pytz import timezone
 from operator import itemgetter
 
@@ -10,17 +10,23 @@ class SnowflakeAccess:
     inst = None
 
     class __SAO:  #snowflake access object, private
-        def __init__(self, username, password, account_name):
+        def __init__(self, login_name, password, account_name):
             try:
-                self.connection = snowflake.connector.connect(user=username, password=password, account=account_name)
-            except snowflake.connector.errors.DatabaseError as e0:
-                print(e0.msg)
-            self.username = username
-            self.account_name = account_name
-            self.region = account_name.split(".")[1]
-        def __str__(self):
-            return repr(self) + "\n\tusername: " + self.username + "\n\taccount: " + self .account_name
-
+                self.connection = snowflake.connector.connect(user=login_name, password=password, account=account_name, login_timeout=5)
+                self.login_name = login_name
+                self.account_name = account_name
+                self.region = account_name.split(".")[1]
+                cur = self.connection.cursor(DictCursor)
+                user_name = cur.execute('select current_user()').fetchone()['CURRENT_USER()']
+                cur.execute('desc user {0}'.format(user_name))
+                for rec in cur:
+                    key = rec['property']
+                    value = rec['value']
+                    if value != 'null':
+                        self.__setattr__(key, value)
+            except snowflake.connector.errors.DatabaseError:
+                self.connection = None
+                raise
 
     def __init__(self, username, password, account_name):
         if not SnowflakeAccess.inst:
@@ -28,11 +34,10 @@ class SnowflakeAccess:
         else:
             try:
                 SnowflakeAccess.inst.connection = snowflake.connector.connect(user=username, password=password, account=account_name)
-            except snowflake.connector.errors.DatabaseError as e0:
-                print(e0.msg)
+            except snowflake.connector.errors.DatabaseError:
+                raise
     def __getattr__(self, name):
         return getattr(self.inst, name)
-
 
     def close(self):
         self.inst.connection.close()
@@ -42,8 +47,13 @@ class SnowflakeAccess:
 
     def metering_history(self):
         cur = self.inst.connection.cursor(DictCursor)
-        cur.execute("select credits_used, start_time from snowflake.account_usage.warehouse_metering_history")
-
+        cur.execute("use role accountadmin")
+        cur.execute("use warehouse report_wh")
+        try:
+            cur.execute("select credits_used, start_time from snowflake.account_usage.warehouse_metering_history")
+        except snowflake.connector.ProgrammingError as e0:
+            print(e0.msg)
+            raise
         # Data Transformations
         history = []
         for rec in cur:
@@ -155,6 +165,8 @@ class SnowflakeAccess:
     def query_user_usage(self, start_date=datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(hours=166),
                          end_date=datetime.datetime.now(timezone("US/Eastern"))):
         cur = self.inst.connection.cursor(DictCursor)
+        cur.execute("use role accountadmin")
+        cur.execute("use warehouse report_wh")
         history = []
         try:
             cur.execute("select user_name, start_time, total_elapsed_time from "
@@ -168,17 +180,21 @@ class SnowflakeAccess:
                 history.append(rec)
         except snowflake.connector.ProgrammingError as e0:
             print(e0.msg)
+            raise
         return history
 
 
-    def query_user_history(self, start_date=datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(minutes=30), ongoing_only=False): # Defaults to all queries in the last 30 minutes
+    def query_user_history(self, numMinutes=30, ongoingOnly=False): # Defaults to all queries in the last 30 minutes
         cur = self.inst.connection.cursor(DictCursor)
+        cur.execute("use role accountadmin")
+        cur.execute("use warehouse report_wh")
+        start_date = datetime.datetime.now(timezone("US/Eastern")) - datetime.timedelta(minutes=int(numMinutes))
         history = []
         try:
             cur.execute("select query_id, query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from "
                         "table(snowflake.information_schema.query_history("
                         "end_time_range_start=> to_timestamp_ltz(\'{0}\'))) "
-                        "where user_name not like \'%ALERTS%\'"
+                        "where user_name not like \'%SEDCADMIN%\'"
                         "order by start_time".format(start_date.strftime("%Y-%m-%d %H:%M:%S %z")))
             for rec in cur:
                 # Data Transformations
@@ -197,20 +213,24 @@ class SnowflakeAccess:
                     rec['END_TIME'] = rec['START_TIME']
                 else:
                     rec['TOTAL_ELAPSED_TIME'] = time_string
-                if ongoing_only:
+                if ongoingOnly:
                     if rec['EXECUTION_STATUS'] == 'RESUMING_WAREHOUSE' or rec['EXECUTION_STATUS'] == 'RUNNING' or rec['EXECUTION_STATUS'] == 'QUEUED':
                         history.append(rec)
                 else:
                     history.append(rec)
         except snowflake.connector.ProgrammingError as e0:
             print(e0.msg)
+            raise
         history.reverse()
         return history
 
     def stop_query(self, id):
-        message = self.inst.connection.cursor().execute("select system$cancel_query(\'{0}\')".format(id)).fetchone()
+        cur = self.inst.connection.cursor()
+        cur.execute("use role accountadmin")
+        cur.execute("use warehouse report_wh")
+        message = cur.execute("select system$cancel_query(\'{0}\')".format(id)).fetchone()
         if message[0] != 'Identified SQL statement is not currently executing.':
-            status, error_message, error_code, start_time, end_time = self.inst.connection.cursor().execute(
+            status, error_message, error_code, start_time, end_time = cur.execute(
                 "select execution_status, error_message, error_code, start_time, end_time from "
                 "table(snowflake.information_schema.query_history("
                 "end_time_range_start=> to_timestamp_ltz(\'{0}\'))) "
@@ -223,4 +243,3 @@ class SnowflakeAccess:
             return obj
         else:
             return {'id': id, 'status': 'SUCCESS', 'message': message[0]}
-

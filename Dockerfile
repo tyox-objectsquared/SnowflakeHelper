@@ -1,4 +1,4 @@
-FROM python:rc-alpine
+FROM nikolaik/python-nodejs:python3.7-nodejs10
 
 MAINTAINER Tyler Yox "tyox@objectsquared.com"
 
@@ -8,8 +8,13 @@ WORKDIR /app
 
 RUN pip install -r requirements.txt
 
+RUN npm install -g pm2
+
 COPY . /app
 
-ENTRYPOINT [ "python" ]
+EXPOSE 3000
 
-CMD[ "app.py" ]
+WORKDIR /app/webapp
+
+# commands to start NodeJS server in background and Flask server in foreground
+ENTRYPOINT pm2 start npm -- start && python ../snowflake_alerts/app.py

@@ -1,20 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import Queries from './queries/Queries'
-import Usage from './usage/Usage'
-import { BrowserRouter, Route, Switch } from 'react-router-dom';
 import * as serviceWorker from './serviceWorker';
 import 'bootstrap/dist/js/bootstrap.bundle.js';
+import App from "./App";
 
 ReactDOM.render(
     <div>
-        <BrowserRouter>
-            <Switch>
-                <Route exact path='/queries' component={Queries}/>
-                <Route exact path='/usage' component={Usage}/>
-            </Switch>
-        </BrowserRouter>
+    <App />
     </div>
 , document.getElementById('root'));
 
