@@ -24,7 +24,8 @@
     "react-scripts": "2.1.8",
     "react-tooltip": "^3.10.0",
     "request": "^2.88.0",
-    "sql-formatter": "^2.3.2"
+    "sql-formatter": "^2.3.2",
+    "node": "latest"
   },
   "scripts": {
     "start": "react-scripts --inspect start",

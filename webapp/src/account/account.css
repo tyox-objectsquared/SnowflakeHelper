@@ -1,0 +1,15 @@
+.card {
+    margin: 15px;
+}
+.alert {
+    padding: .375rem .75rem;
+    display: inline-block;
+}
+.btn {
+    vertical-align: baseline;
+    margin-right: 15px;
+}
+
+.label {
+    color: #aaaaaa;
+}

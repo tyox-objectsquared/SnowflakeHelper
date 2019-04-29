@@ -3,6 +3,8 @@ import './index.css';
 import Queries from './queries/Queries';
 import Usage from './usage/Usage';
 import Login from './login/Login';
+import Account from './account/Account';
+import Password from './account/ChangePassword';
 import { BrowserRouter, Route, Switch, Redirect} from 'react-router-dom';
 import 'bootstrap/dist/js/bootstrap.bundle.js';
 import API from './api/API';
@@ -10,13 +12,15 @@ import API from './api/API';
 class App extends Component {
 
     static authService = {
+        currentUser: localStorage.getItem('username'),
         isAuthenticated: localStorage.getItem('isAuth'),
         authorizationHeader: localStorage.getItem('auth_token'),
         message: null,
         authenticate(username, password, account, cb) {
             const payload = {username: username, password: password, account: account};
             const api = new API();
-            api.postHTTP('http://localhost:5000/login', payload,(data, statusCode) => {
+            this.message = null;
+            api.postHTTP('http://localhost:5000/login', {}, payload,(data, statusCode) => {
                 if (statusCode === 401 || statusCode === 500) {
                     this.isAuthenticated = "no";
                     this.message = data;
@@ -24,7 +28,8 @@ class App extends Component {
                 else { // statusCode === 200
                     this.isAuthenticated = "yes";
                     localStorage.setItem('isAuth', this.isAuthenticated);
-                    this.message = null;
+                    this.currentUser = username;
+                    localStorage.setItem('username', this.currentUser);
                 }
                 cb();
             });
@@ -36,7 +41,6 @@ class App extends Component {
         }
     };
 
-
     render() {
         return (
             <div>
@@ -44,14 +48,15 @@ class App extends Component {
                     <Switch>
                         <PrivateRoute exact path='/queries' component={Queries}/>
                         <PrivateRoute exact path='/usage' component={Usage}/>
+                        <PrivateRoute exact path='/account' component={Account}/>
+                        <PrivateRoute exact path='/change-password' component={Password}/>
                         <LoginRoute exact path='/login' component={Login}/>
+                        <Route exact path='/' render={props => <Redirect to=   {{pathname: "/login", state: {from: props.location}}} />}/>
                     </Switch>
                 </BrowserRouter>
             </div>
         );
     }
-
-
 }
 export default App;
 
