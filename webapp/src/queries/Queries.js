@@ -185,3 +185,5 @@ class Queries extends Component {
 }
 
 export default withRouter(Queries);
+
+export class Query {
