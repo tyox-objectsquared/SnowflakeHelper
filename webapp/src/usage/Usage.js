@@ -1,7 +1,6 @@
 import React, {Component} from 'react';
 import './usage.css';
 import NavBar from "../nav/Nav";
-import './UsageEntry';
 import Octicon, {Search, Info} from '@githubprimer/octicons-react';
 import {
     Chart,
@@ -14,6 +13,7 @@ import {
     ChartArea,
     ChartTooltip
 } from '@progress/kendo-react-charts';
+import {ReactComponent as LoadingRing} from '../doubleRing-200px.svg';
 import 'hammerjs';
 import ReactTooltip from "react-tooltip";
 import {withRouter} from 'react-router-dom';
@@ -28,7 +28,7 @@ class Usage extends Component {
     }
 
 
-    handleResize = () => { //force chart to refresh dimensions when page is resized
+    handleResize = () => { //force chart to re-render when window is resized
         let temp = this.state.selectedDate;
         this.setState({selectedDate: null});
         this.setState({selectedDate: temp});
@@ -38,9 +38,9 @@ class Usage extends Component {
     componentDidMount(): void { //private - requires authorization
         window.addEventListener('resize', this.handleResize);
         const api = new API();
-        api.getHTTP("http://localhost:5000/usage", (data, statusCode) => { //getUsage
+        api.getHTTP("http://localhost:5000/usage", {},(data, statusCode) => {
             if (statusCode === 401) this.props.history.push('/login');
-            else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
+            else if (statusCode === 500) this.setState({loading: false, error: data}); //is an error
             else {
                 this.setState({
                     loading: false,
@@ -54,42 +54,31 @@ class Usage extends Component {
     }
 
 
-    renderSelector = (months: [], current_month) => {
-        if ('error' in this.state) {
-            return (
-                <div className="row table-row">
-                    <div className="col" data-tip={this.state.error}>{ this.state.error }</div>
-                    <ReactTooltip html={true} effect="solid" type="error" delayShow={500} />
-                </div>
-            )
-        }
+    renderSelector = (months: [], current_month: string) => {
         if (months.length === 0) {
+            this.setState({error: "There is no usage data to display."});
+            return null;
+        } else {
             return (
-                <div className="row table-row">
-                    <div className="col" data-tip={"There is no usage data to display."}>There is no usage data to display.</div>
-                    <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                <div className="dropdown">
+                    <button className="btn btn-secondary dropdown-toggle w-hundred" type="button" id="dropdownMenuButton"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{current_month}</button>
+                    <div className="dropdown-menu w-hundred" aria-labelledby="dropdownMenuButton">{
+                        months.map( (month) => {return <div key={month} onClick={()=>this.setState({selectedMonth: month, selectedDate: null})} className="dropdown-item w-hundred">{month}</div>})
+                    }
+                    </div>
                 </div>
             )
         }
-        return (
-            <div className="dropdown ">
-                <button className="btn btn-secondary dropdown-toggle w-hundred" type="button" id="dropdownMenuButton"
-                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{current_month}</button>
-                <div className="dropdown-menu w-hundred" aria-labelledby="dropdownMenuButton">{
-                    months.map( (month) => {return <div key={month} onClick={()=>this.setState({selectedMonth: month, selectedDate: null})} className="dropdown-item w-hundred">{month}</div>})
-                }
-                </div>
-            </div>
-        )
     };
 
 
-    renderList = (dailyData, month, selectedDate) => {
+    renderList = (dailyData: {}, month: string, selectedDate: string) => {
         return Object.entries(dailyData).map(([date, data]) => {
             let hasPieChart = 'users' in data; //boolean
             return (
                 <div className={"row table-row " + (date === selectedDate ? "selected-table-row " : "") + ( data['credits'] !== 0 ? "search-icon " : "")}
-                     key={month+"/"+date} onClick={data['credits'] !== 0 ? ()=>this.setState({selectedDate: date}): null}>
+                     key={month+"/"+date} onClick={data['credits'] !== 0 ? ()=>this.updateDate(date): null}>
                     <div className="col-4">{month.split(",")[0]} {date}</div>
                     <div key={date} className="col-8">{data['credits']}
                     {data['credits'] !== 0 ?<Octicon icon={Search} />: null}
@@ -143,17 +132,24 @@ class Usage extends Component {
         </Chart>
         )};
 
+    updateDate = (date: string) => { // closes chart view if you click on same date
+        let newDate = null;
+        if (date !== this.state.selectedDate) newDate = date;
+        this.setState({selectedDate: newDate});
+    };
+
     render() {
-        const { loading, dailyData, months, selectedMonth, selectedDate } = this.state;
+        const { loading, dailyData, months, selectedMonth, selectedDate, error } = this.state;
         return (
             <div className="container-fluid">
                 <NavBar/>
-                <div className="list container-fluid"  id="table-fragment">
-                    <div className="row">
-                        <div className="col">{loading ? "Loading..." : this.renderSelector(months, selectedMonth)}</div>
-                    </div>
-                    {selectedMonth != null ? this.renderList(dailyData[selectedMonth], selectedMonth, selectedDate) : null}
-                </div>
+                {!loading && !error ?
+                    <div className="list container-fluid" id="table-fragment">
+                        <div className="row">
+                            <div className="col">{this.renderSelector(months, selectedMonth)}</div>
+                        </div>
+                        {selectedMonth != null ? this.renderList(dailyData[selectedMonth], selectedMonth, selectedDate) : null}
+                    </div>: error ? <span className="alert alert-danger">{error}</span>: <div className="ring-container" style={{marginTop: "100px"}}><LoadingRing /></div>}
             </div>
         )
     }

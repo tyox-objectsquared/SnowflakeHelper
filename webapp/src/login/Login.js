@@ -37,7 +37,7 @@ class Login extends Component {
                                 <label>Password</label>
                                 <input onChange={(event) => this.setState({password: event.target.value})} type="password" className="form-control" placeholder="Password" />
                             </div>
-                            <button onClick={() => this.login(this.state.username, this.state.password, this.state.account)} disabled={(! /[A-Za-z]{2}\d{5}/.test(account) || username === "") || password === ""} className="btn btn-primary form-group">Submit</button>
+                            <button onClick={() => this.login(username, password, account)} disabled={(! /[A-Za-z]{2}\d{5}/.test(account) || account.length !== 7) || (username === "" || password === "")} className="btn btn-primary form-group">Submit</button>
                             {App.authService.message ? <div className="alert alert-danger">{App.authService.message}</div> : null}
                         </div>
                     </div> : <div className="alert alert-danger">Cannot connect to server.</div>}

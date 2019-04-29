@@ -1,12 +1,13 @@
 import React, {Component, Fragment} from 'react';
 import './queries.css';
-import {Query} from './Query';
 import NavBar from "../nav/Nav";
 import Octicon, {Check, Sync, IssueOpened, Shield, ListUnordered, Ellipsis} from '@githubprimer/octicons-react';
+import {ReactComponent as LoadingRing} from '../doubleRing-200px.svg';
 import ReactTooltip from 'react-tooltip'
 import sqlFormatter from "sql-formatter";
 import {withRouter} from 'react-router-dom';
 import API from '../api/API';
+import App from '../App';
 class Queries extends Component {
 
     statusMap = {
@@ -44,12 +45,12 @@ class Queries extends Component {
         this.getQueries(this.state.numMinutes);
     }
 
-    getQueries = (numMinutes) => { //private - requires authorization
+    getQueries = (numMinutes: number) => {
         this.setState({queriedMinutes: numMinutes});
         const api = new API();
-        api.getHTTP("http://localhost:5000/queries?numMinutes="+numMinutes, (data, statusCode: number) => {
+        api.getHTTP("http://localhost:5000/queries", {numMinutes: numMinutes},(data, statusCode: number) => {
             if (statusCode === 401) this.props.history.push('/login');
-            else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
+            else if (statusCode === 500) this.setState({loading: false, error: data}); //is an error
             else {
                 const queries = [];
                 for (var i=0; i < data.length; ++i) {
@@ -70,11 +71,11 @@ class Queries extends Component {
     };
 
 
-    stop_query(id: string) { //private - requires authorization
+    stop_query = (id: string) => {
         const api = new API();
-        api.postHTTP("http://localhost:5000/queries/stop?id=" + id, null, (data, statusCode) => {
+        api.postHTTP("http://localhost:5000/queries/stop", {id: id}, null, (data, statusCode) => {
             if (statusCode === 401) this.props.history.push('/login');
-            else if (statusCode / 500 >= 1) this.setState({loading: false, error: data}); //is an error
+            else if (statusCode === 500) this.setState({loading: false, error: data}); //is an error
             else {
                 let queries = this.state.queryData;
                 for (let i=0; i< queries.length; ++i) {
@@ -91,7 +92,7 @@ class Queries extends Component {
                 this.setState({queryData: queries});
             }
         });
-    }
+    };
 
     static formatDateTime(date: Date) {
         let date_string = "";
@@ -105,62 +106,57 @@ class Queries extends Component {
     }
 
     renderQueries = (queryData: Query[]) => {
-        if ('error' in this.state) {
+        const {numMinutes, queriedMinutes} = this.state;
+        if (queryData.length === 0) {
             return (
                 <div className="row table-row">
-                    <div className="col" data-tip={this.state.error}>{ this.state.error }</div>
-                    <ReactTooltip html={true} effect="solid" type="error" delayShow={500} />
+                    <div className="col" data-tip={"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}>{"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}</div>
+                    <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
                 </div>
             )
         }
-        if (queryData.length === 0) {
-            const {numMinutes, queriedMinutes} = this.state;
-            if (numMinutes === queriedMinutes) {
-                return (
-                    <div className="row table-row">
-                        <div className="col" data-tip={"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}>{"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}</div>
-                        <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
-                    </div>
-                )
-            } else {
-                return (
-                    <div className="row table-row">
-                        <div className="col" data-tip={"Press Refresh to see queries within a different interval."}>Press Refresh to see queries within a different interval.</div>
-                        <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
-                    </div>
-                )
-            }
-        }
-        return queryData.map((query) => {
-            let formatted_status = this.statusMap[query.execution_status].text;
-            if (query.execution_status === "FAILED_WITH_ERROR") {
-                formatted_status += "Failed with Error Code " + query.error_code + ": " + query.error_message;
-            }
-            let formatted_sql: string = sqlFormatter.format(query.sql_text);
-            formatted_sql = formatted_sql.replace(/(?:\r\n|\r|\n)/g, '<br>');
+        else if (numMinutes !== queriedMinutes) {
             return (
-                <div key={query.query_id} className="row table-row">
-                    <div className="col-1 status">
-                        <div  style={{width: "30px", color: this.statusMap[query.execution_status].color}} data-tip={"<div>" + formatted_status + "</div>"}><Octicon icon={this.statusMap[query.execution_status].icon} /></div>
-                        <div>{formatted_status === "Running" ? <div onClick={() => this.stop_query(query.query_id)} style={{"height": "27px", "paddingTop": 0, "paddingBottom": 0, "cursor": "pointer"}} className={"btn btn-danger"}>Stop</div> : null}</div>
-                    </div>
-                    <div className="col-4 sql" data-tip={"<div>" + formatted_sql +"</div>"} >{query.sql_text}</div>
-                    <div className="col-1" data-tip={"<div>" + query.username + "</div>"}>{query.username}</div>
-                    <div className="col-2" data-tip={"<div>" + query.start_time + "</div>"}>{query.start_time}</div>
-                    <div className="col-2" data-tip={"<div>" + query.end_time + "</div>"}>{query.end_time}</div>
-                    <div className="col-1" data-tip={"<div>" + query.total_elapsed_time + "</div>"}>{query.total_elapsed_time}</div>
+                <div className="row table-row">
+                    <div className="col" data-tip={"Press Refresh to see queries within a different interval."}>Press Refresh to see queries within a different interval.</div>
                     <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
                 </div>
-            );
-        });
+            )
+        } else {
+            return queryData.map((query) => {
+                let formatted_status = this.statusMap[query.execution_status].text;
+                if (query.execution_status === "FAILED_WITH_ERROR") {
+                    formatted_status += "Failed with Error Code " + query.error_code + ": " + query.error_message;
+                }
+                let formatted_sql: string = sqlFormatter.format(query.sql_text);
+                let query_username = query.username;
+                let login_username = App.authService.currentUser;
+                // SEDCADMIN can stop anyone's running query; other users can stop only their own running queries
+                let canStop = (login_username === "SEDCADMIN" || query_username === login_username) && formatted_status === "Running";
+                return (
+                    <div key={query.query_id} className="row table-row">
+                        <div className="col-1 status">
+                            <div style={{width: "30px", color: this.statusMap[query.execution_status].color}} data-tip={"<div>" + formatted_status + "</div>"}><Octicon icon={this.statusMap[query.execution_status].icon} /></div>
+                            <div>{canStop ? <div onClick={() => this.stop_query(query.query_id)} style={{"height": "27px", "paddingTop": 0, "paddingBottom": 0, "cursor": "pointer"}} className={"btn btn-danger"}>Stop</div> : null}</div>
+                        </div>
+                        <div className="col-4 sql" data-tip={"<pre>" + formatted_sql + "</pre>"}>{query.sql_text}</div>
+                        <div className="col-1" data-tip={"<div>" + query.username + "</div>"}>{query.username}</div>
+                        <div className="col-2" data-tip={"<div>" + query.start_time + "</div>"}>{query.start_time}</div>
+                        <div className="col-2" data-tip={"<div>" + query.end_time + "</div>"}>{query.end_time}</div>
+                        <div className="col-1" data-tip={"<div>" + query.total_elapsed_time + "</div>"}>{query.total_elapsed_time}</div>
+                        <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                    </div>
+                );
+            });
+        }
     };
 
     render() {
-        const { loading, queryData, numMinutes} = this.state;
+        const { loading, queryData, numMinutes, error} = this.state;
         return (
             <div className="container-fluid">
                 <NavBar/>
-                <div className="list container-fluid">
+                {!error ? <div className="list container-fluid">
                     <div className="row table-header">
                         <div className="col-1">Status</div>
                         <div className="col-2">SQL Text</div>
@@ -175,10 +171,10 @@ class Queries extends Component {
                         <div className="col-2">Start Time</div>
                         <div className="col-2">End Time</div>
                         <div className="col-1">Elapsed Time</div>
-                        <div className="col-1 btn btn-outline-light" onClick={() => this.update()} style={{"height": "27px", "paddingTop": 0, "paddingBottom": 0, "cursor": "pointer"}}>Refresh <Octicon icon={Sync} /></div>
+                        <div className="col btn btn-outline-light" onClick={() => this.update()} style={{"height": "27px", "paddingTop": 0, "paddingBottom": 0, "cursor": "pointer"}}>Refresh <Octicon icon={Sync} /></div>
                     </div>
-                    <Fragment>{loading ? "Loading..." : this.renderQueries(queryData)}</Fragment>
-                </div>
+                    <Fragment>{!loading ? this.renderQueries(queryData) : <div className="ring-container"><LoadingRing /></div>}</Fragment>
+                </div> : <span className="alert alert-danger">{error}</span>}
             </div>
         );
     }
@@ -187,3 +183,16 @@ class Queries extends Component {
 export default withRouter(Queries);
 
 export class Query {
+    constructor(query_id, execution_status, sql_text, username, error_code,
+                error_message, start_time, end_time, total_elapsed_time) {
+        this.query_id = query_id;
+        this.execution_status = execution_status;
+        this.sql_text = sql_text;
+        this.username = username;
+        this.error_code = error_code;
+        this.error_message = error_message;
+        this.start_time = start_time;
+        this.end_time = end_time;
+        this.total_elapsed_time = total_elapsed_time;
+    }
+}

@@ -37,3 +37,8 @@ code {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.ring-container {
+  display: flex;
+  justify-content: center;
+}
