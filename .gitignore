@@ -3,4 +3,4 @@ venv/*
 webapp/node_modules/*
 webapp/.idea/*
 *.log
-snowflake_alerts/__pycache__/
+*.pyc
