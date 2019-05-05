@@ -1,0 +1,9 @@
+{
+  "apps": [
+    {
+      "name": "npm start",
+      "script": "npm",
+      "args": "start --prefix /app/webapp"
+    }
+  ]
+}

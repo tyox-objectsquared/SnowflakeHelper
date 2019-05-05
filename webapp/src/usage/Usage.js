@@ -15,7 +15,6 @@ import {
 } from '@progress/kendo-react-charts';
 import {ReactComponent as LoadingRing} from '../doubleRing-200px.svg';
 import 'hammerjs';
-import ReactTooltip from "react-tooltip";
 import {withRouter} from 'react-router-dom';
 import API from '../api/API';
 

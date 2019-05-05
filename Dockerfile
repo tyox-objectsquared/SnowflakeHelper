@@ -1,4 +1,4 @@
-FROM nikolaik/python-nodejs:python3.7-nodejs10
+FROM nikolaik/python-nodejs:python3.7-nodejs11
 
 MAINTAINER Tyler Yox "tyox@objectsquared.com"
 
@@ -14,7 +14,5 @@ COPY . /app
 
 EXPOSE 3000
 
-WORKDIR /app/webapp
-
 # commands to start NodeJS server in background and Flask server in foreground
-ENTRYPOINT pm2 start npm -- start && python ../snowflake_alerts/app.py
+ENTRYPOINT pm2 start apps.json && python /app/snowflake_helper/app.py
