@@ -1,0 +1,12 @@
+version: "0.4"
+services:
+  webapp:
+    build: ./webapp
+    container_name: sh_webapp
+    ports:
+     - "80:80"
+  api:
+    build: ./snowflake_helper
+    container_name: sh_api
+    ports:
+      - "5000:5000"
