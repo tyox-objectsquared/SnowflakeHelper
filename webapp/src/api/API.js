@@ -29,7 +29,7 @@ class API extends Component {
 
 
     getHTTP(url: string, qs: {}, cb) {
-        qs.start_date = new Date().toString();
+        qs.start_date = (new Date().getTime() / 1000) | 0; //truncate decimal
         request.get({
             url: url,
             json: true,
@@ -42,7 +42,7 @@ class API extends Component {
 
 
     postHTTP(url: string,  qs: {}, payload: Object, cb) {
-        qs.start_date = new Date().toString();
+        qs.start_date = (new Date().getTime() / 1000) | 0; //truncate decimal
         request.post({
             url: url,
             body: payload,

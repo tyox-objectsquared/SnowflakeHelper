@@ -5,8 +5,8 @@ from pytz import timezone
 from operator import itemgetter
 
 TAG = "Snowflake Helper"
-SNOWFLAKE_TIME_FMT = "%a %b %d %Y %H:%M:%S GMT%z (%Z)"
-
+SNOWFLAKE_TIME_FMT = "%a, %d %b %Y %H:%M:%S GMT"
+EST = timezone("US/Eastern")
 
 class SnowflakeAccess:
     def __init__(self, login_name, password, account_name):
@@ -86,6 +86,7 @@ class SnowflakeAccess:
     * Fields present only for dates in past one week; Snowflake only keeps one week of query logs
     '''
     def metering_history(self, start_date):
+        start_date = datetime.fromtimestamp(int(start_date), EST)
         cur = self.connection.cursor(DictCursor)
         try:
             cur.execute("select credits_used, start_time from snowflake.account_usage.warehouse_metering_history/*"+TAG+"*/")
@@ -154,7 +155,6 @@ class SnowflakeAccess:
 
 
     def query_user_usage(self, start_date):
-        start_date = datetime.strptime(start_date, SNOWFLAKE_TIME_FMT)
         end_date = start_date - timedelta(hours=166)
         cur = self.connection.cursor(DictCursor)
         queries = []
@@ -197,7 +197,7 @@ class SnowflakeAccess:
 
     def query_user_history(self, start_date, numMinutes=30, ongoingOnly=False): # Defaults to all queries in the last 30 minutes
         cur = self.connection.cursor(DictCursor)
-        start_date = datetime.strptime(start_date, SNOWFLAKE_TIME_FMT) - timedelta(minutes=int(numMinutes))
+        start_date = datetime.fromtimestamp(int(start_date), EST) - timedelta(minutes=int(numMinutes))
         history = []
         try:
             cur.execute("select query_id, query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from "
@@ -236,7 +236,7 @@ class SnowflakeAccess:
 
     def stop_query(self, id, start_date):
         cur = self.connection.cursor()
-        start_date = datetime.strptime(start_date, SNOWFLAKE_TIME_FMT) - timedelta(minutes=1)
+        start_date = datetime.fromtimestamp(int(start_date), EST) - timedelta(minutes=1)
         message = cur.execute("select system$cancel_query(\'{0}\')".format(id)).fetchone()
         if message[0] != "Identified SQL statement is not currently executing.":
             status, error_message, error_code, start_time, end_time = cur.execute(
