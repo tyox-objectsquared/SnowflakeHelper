@@ -1,12 +1,23 @@
-FROM mhart/alpine-node:11
+FROM node:8 as react-build
 
 MAINTAINER Tyler Yox "tyox@objectsquared.com"
 
-RUN yarn global add serve
-
 WORKDIR /app
 
-COPY ./build .
+COPY . ./
+
+RUN yarn
+
+RUN yarn build
+
+
+
+
+FROM mhart/alpine-node:11
+
+RUN yarn global add serve
+
+COPY --from=react-build /app/build .
 
 EXPOSE 80/tcp
 

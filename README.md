@@ -9,9 +9,11 @@ A containerized web interface for SEDC's cooperative reader accounts to monitor 
 - Stop problematic queries quickly
 - View utilization time distribution between users for recent queries
 
-##### Docker Commands
-- Build: docker build -t {docker_username}/snowflake-helper:{version} .
-- Run: docker run -p 5000:5000 -p 3000:3000 --name SnowflakeHelper {docker_username}/snowflake-helper:{version}
+##### Docker Commands (from project root-dir context)
+- Build: docker-compose build
+- Run (also builds if not yet built): docker-compose up
+- Stop: docker-compose stop
+- Stop + Clean: docker-compose down 
 
 #### Tech Stack
 ##### Backend (Python):
