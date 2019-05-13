@@ -10,7 +10,6 @@ RUN yarn
 
 RUN yarn build
 
-
 FROM mhart/alpine-node:11
 
 RUN yarn global add serve
