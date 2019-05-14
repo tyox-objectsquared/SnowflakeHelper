@@ -164,6 +164,7 @@ class SnowflakeAccess:
                         "table(snowflake.information_schema.query_history("
                         "end_time_range_start=> to_timestamp_ltz(\'{0}\'), "
                         "end_time_range_end=> to_timestamp_ltz(\'{1}\'))) "
+                        "where user_name not like \'SEDCADMIN\' " #Hide SEDCADMIN usage
                         "order by start_time/*{2}*/".format(end_date.strftime("%Y-%m-%d %H:%M:%S %z"), start_date.strftime("%Y-%m-%d %H:%M:%S %z"), TAG))
             for rec in cur:
                 # Data Transformations
@@ -203,7 +204,8 @@ class SnowflakeAccess:
             cur.execute("select query_id, query_text, user_name, warehouse_name, execution_status, error_code, error_message, start_time, end_time, total_elapsed_time from "
                         "table(snowflake.information_schema.query_history("
                         "end_time_range_start=> to_timestamp_ltz(\'{0}\'))) "
-                        "where query_text not like \'%\*Snowflake Helper\*%\'" #filter out queries that have the Snowflake Helper TAG as an SQL comment
+                        "where query_text not like \'%\*{1}\*%\' " #filter out queries that have the Snowflake Helper TAG as an SQL comment
+                        "and user_name not like \'SEDCADMIN\' " #Hide SEDCADMIN queries
                         "order by start_time/*{1}*/".format(start_date.strftime("%Y-%m-%d %H:%M:%S %z"), TAG))
             for rec in cur:
                 # Data Transformations
