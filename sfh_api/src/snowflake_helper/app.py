@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from flask import Flask, request, make_response
 from flask_cors import CORS
-import snowflake_access as sa
+from sfh_api.src.snowflake_helper import snowflake_access as sa
 import json
 import snowflake.connector
 import datetime
@@ -12,7 +12,6 @@ SECRET_KEY = '3GAbKNF938Vq5LZA6TU7jc5zPts2PcA6'
 app.config["SECRET_KEY"] = SECRET_KEY
 CORS(app)
 
-# TODO Dockerize
 
 ### PUBLIC ENDPOINTS - anyone can access ###
 
@@ -29,10 +28,11 @@ def login():
             auth_token = encode_auth_token({'user': data["username"], 'account': data["account"]}) #no need to transfer password anymore
             if auth_token: #return the encoded auth_token
                 return make_response(json.dumps({"data": {"isAuth": True}, "auth_token": auth_token}, default=str), 200)
-    except snowflake.connector.errors.DatabaseError as e0:
+    except snowflake.connector.errors.DatabaseError:
         return make_response(json.dumps({"data": {'isAuth': False, 'message': "Incorrect username or password was specified."}}), 401)
     except snowflake.connector.errors.ForbiddenError:
         return make_response(json.dumps({"data": {'isAuth': False, 'message':  "Failed to connect to Snowflake. Verify the account name is correct"}}), 401)
+
 
 ### PRIVATE ENDPOINTS - authorization header is required ###
 
