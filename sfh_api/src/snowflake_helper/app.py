@@ -2,12 +2,14 @@
 from flask import Flask, request, make_response
 from flask_cors import CORS
 from sfh_api.src.snowflake_helper import snowflake_access as sa
+from sfh_api.tests.testing_creds import TEST_USERNAME, TEST_PASSWORD, TEST_ACCOUNT_NAME
 import json
 import snowflake.connector
 import datetime
 import jwt
 
 app = Flask(__name__)
+MODE = 'PROD'
 SECRET_KEY = '3GAbKNF938Vq5LZA6TU7jc5zPts2PcA6'
 app.config["SECRET_KEY"] = SECRET_KEY
 CORS(app)
@@ -39,33 +41,41 @@ def login():
 def private_request(req, method_name):
     auth_token = req.headers.get('Authorization')
     if auth_token:
-        resp = decode_auth_token(auth_token)
+        resp, exp = decode_auth_token(auth_token)
         if resp == 'expired': return 'authorization token expired', 401
         if resp == 'invalid': return 'authorization token invalid', 401
         extended_token = extend_auth_token(auth_token)
         try:
-            sao = sa.SnowflakeAccess(login_name='SEDCADMIN', password='P@rt41209', account_name=resp.get('account')) # log in as SEDCAMIN user on reader account
+            sao = None
+            if MODE == 'TESTING':
+                sao = sa.SnowflakeAccess(login_name=TEST_USERNAME, password=TEST_PASSWORD, account_name=TEST_ACCOUNT_NAME) # testing done on main account, not the reader acct
+            else:
+                sao = sa.SnowflakeAccess(login_name='SEDCADMIN', password='P@rt41209', account_name=resp.get('account')) # log in as SEDCAMIN user on reader account
             sao.declare_role('accountadmin') # switch to accountadmin role
         except snowflake.connector.errors.DatabaseError:
             return 'Account is not properly configured for usage with with Snowflake Helper. Please contact an administrator.', 500
         data = None
+
         try:
-            #Time Sensitive Methods
-            if method_name == 'account_info':
-                data = sao.account_info(**req.args)
-            elif method_name == 'metering_history':
+            #Time Sensitive Methods - use the request timestamp
+            if method_name == 'metering_history':
                 data = sao.metering_history(**req.args)
             elif method_name == 'query_history':
                 data = sao.query_user_history(**req.args)
             elif method_name == 'stop_query':
                 data = sao.stop_query(**req.args)
             #Non Time Sensitive Methods, don't require the request timestamp
+            elif method_name == 'account_info':
+                data = sao.account_info(req.args["username"])
             elif method_name == 'change_email':
                 req_data = json.loads(req.data)
                 data = sao.change_email(req_data["username"], req_data["emailAddress"])
             elif method_name == 'change_password':
                 req_data = json.loads(req.data)
                 data = sao.change_password(req_data["loginName"], req_data["username"], req_data["oldP"], req_data["newP"])
+            elif method_name == 'start_query':
+                req_data = json.loads(req.data)
+                data = sao.start_query(req_data["query"])
         except snowflake.connector.ProgrammingError as e0:
             return str(e0), 500
         sao.close() # close snowflake session when finished
@@ -90,6 +100,10 @@ def query_history():
 def stop_query():
     return private_request(request, 'stop_query')
 
+@app.route('/queries/start', methods=["POST"])
+def start_query():
+    return private_request(request, 'start_query')
+
 @app.route('/update-email', methods=["POST"])
 def change_email():
     return private_request(request, 'change_email')
@@ -104,7 +118,7 @@ def change_password():
 def encode_auth_token(data):
     try:
         payload = {
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=5),
+            'exp': (datetime.datetime.utcnow() + datetime.timedelta(minutes=5)).timestamp(),
             'iat': datetime.datetime.utcnow(),
             'sub': data
         }
@@ -119,7 +133,7 @@ def encode_auth_token(data):
 def decode_auth_token(auth_token):
     try:
         payload = jwt.decode(auth_token, app.config.get('SECRET_KEY'), algorithms=["HS256"])
-        return payload["sub"]
+        return payload["sub"], payload["exp"]
     except jwt.ExpiredSignatureError:
         return 'expired'
     except jwt.InvalidTokenError:
@@ -128,7 +142,7 @@ def decode_auth_token(auth_token):
 def extend_auth_token(auth_token):
     try:
         payload = jwt.decode(auth_token, app.config.get('SECRET_KEY'), algorithms=["HS256"])
-        payload["exp"] = datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+        payload["exp"] = (datetime.datetime.utcnow() + datetime.timedelta(minutes=5)).timestamp()
         return jwt.encode(
             payload,
             app.config.get('SECRET_KEY'),

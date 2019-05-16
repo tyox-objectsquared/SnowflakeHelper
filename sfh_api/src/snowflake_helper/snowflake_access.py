@@ -3,6 +3,7 @@ from snowflake.connector import DictCursor
 from datetime import datetime, timedelta
 from pytz import timezone
 from operator import itemgetter
+from threading import Thread
 
 TAG = "Snowflake Helper"
 SNOWFLAKE_TIME_FMT = "%a, %d %b %Y %H:%M:%S GMT"
@@ -34,7 +35,7 @@ class SnowflakeAccess:
         return {"status": "success", "message": "Email has been updated successfully."}
 
 
-    def account_info(self, username, start_date):
+    def account_info(self, username):
         cur = self.connection.cursor(DictCursor)
         cur.execute('desc user {0}/*{1}*/'.format(username, TAG))
         user_data = {}
@@ -234,6 +235,13 @@ class SnowflakeAccess:
             raise
         history.reverse()
         return history
+
+
+    # generalized query used for testing - starts in a new Thread
+    def start_query(self, query):
+        new_thread = Thread(target=self.connection.cursor().execute(query))
+        new_thread.start()
+        return {"status": "queued", "query": query}
 
 
     def stop_query(self, id, start_date):
