@@ -34,7 +34,7 @@ class SnowflakeAccess:
         return {"status": "success", "message": "Email has been updated successfully."}
 
 
-    def account_info(self, username, start_date):
+    def account_info(self, username):
         cur = self.connection.cursor(DictCursor)
         cur.execute('desc user {0}/*{1}*/'.format(username, TAG))
         user_data = {}
@@ -46,7 +46,7 @@ class SnowflakeAccess:
         return user_data
 
 
-    def change_password(self, login_name, username,old_password, new_password):
+    def change_password(self, login_name, username, old_password, new_password):
         try:
             acct = SnowflakeAccess(login_name=login_name, password=old_password, account_name=self.account_name)
             self.connection.cursor().execute("alter user {0} set password = \'{1}\'/*{2}*/".format(username, new_password, TAG))
@@ -234,6 +234,16 @@ class SnowflakeAccess:
             raise
         history.reverse()
         return history
+
+
+    def start_query(self, query):
+        cur = self.connection.cursor()
+        cur.execute(query)
+        data = []
+        for rec in cur:
+            data.append(rec)
+        return data[0]
+
 
 
     def stop_query(self, id, start_date):

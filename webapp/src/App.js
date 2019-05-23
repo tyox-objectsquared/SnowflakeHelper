@@ -16,8 +16,8 @@ class App extends Component {
         isAuthenticated: localStorage.getItem('isAuth'),
         authorizationHeader: localStorage.getItem('auth_token'),
         message: null,
-        authenticate(username, password, account, cb) {
-            const payload = {username: username, password: password, account: account};
+        logout_button: false,
+        authenticate(username, password, account, cb) {            const payload = {username: username, password: password, account: account};
             const api = new API();
             this.message = null;
             api.postHTTP('http://localhost:5000/login', {}, payload,(data, statusCode) => {
@@ -38,6 +38,10 @@ class App extends Component {
             this.isAuthenticated = "no";
             localStorage.clear();
             if (message === "authorization token expired") this.message = "Session expired. Please login again.";
+            else if (message === "logout") {
+                this.message = "Successfully logged out.";
+                this.logout_button = true;
+            }
         }
     };
 
