@@ -20,7 +20,7 @@ class NavBar extends Component {
                                 <li className="nav-item"><NavLink className="nav-link" to='/queries'>Queries</NavLink></li>
                                 <li className="nav-item"><NavLink className="nav-link" to='/usage'>Usage</NavLink></li>
                                 <li className="nav-item"><NavLink className="nav-link" to='/account'>Account</NavLink></li>
-                                <li className="nav-item"><NavLink onClick={() => App.authService.logout(null)} className="nav-link" to='/login'>Logout</NavLink></li>
+                                <li className="nav-item"><NavLink onClick={() => App.authService.logout("logout")} className="nav-link" to='/login'>Logout</NavLink></li>
                             </ul>
                         </div>
                     </div> : null}
