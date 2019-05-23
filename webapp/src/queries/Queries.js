@@ -107,18 +107,17 @@ class Queries extends Component {
 
     renderQueries = (queryData: Query[]) => {
         const {numMinutes, queriedMinutes} = this.state;
-        if (queryData.length === 0) {
-            return (
-                <div className="row table-row">
-                    <div className="col" data-tip={"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}>{"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}</div>
-                    <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
-                </div>
-            )
-        }
-        else if (numMinutes !== queriedMinutes) {
+        if (numMinutes !== queriedMinutes) {
             return (
                 <div className="row table-row">
                     <div className="col" data-tip={"Press Refresh to see queries within a different interval."}>Press Refresh to see queries within a different interval.</div>
+                    <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
+                </div>
+            )
+        } else if (queryData.length === 0) {
+            return (
+                <div className="row table-row">
+                    <div className="col" data-tip={"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}>{"There are no queries from the past " + this.intervalsMap[numMinutes] + "."}</div>
                     <ReactTooltip html={true} effect="solid" type="info" delayShow={500} />
                 </div>
             )
