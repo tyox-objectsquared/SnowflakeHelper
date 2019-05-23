@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from flask import Flask, request, make_response
 from flask_cors import CORS
-from sfh_api.src.snowflake_helper import snowflake_access as sa
-from sfh_api.tests.testing_creds import TEST_USERNAME, TEST_PASSWORD, TEST_ACCOUNT_NAME
+from .snowflake_access import SnowflakeAccess as sa
+from .testing_creds import TEST_USERNAME, TEST_PASSWORD, TEST_ACCOUNT_NAME
 import json
 import snowflake.connector
 import datetime
@@ -14,7 +14,6 @@ SECRET_KEY = '3GAbKNF938Vq5LZA6TU7jc5zPts2PcA6'
 app.config["SECRET_KEY"] = SECRET_KEY
 CORS(app)
 
-
 ### PUBLIC ENDPOINTS - anyone can access ###
 
 @app.route('/login',  methods=["POST"])
@@ -23,7 +22,7 @@ def login():
         data = json.loads(request.data)
         data["account"] = data["account"].upper() + '.us-east-1'
         # check if a connection to snowflake can be made
-        sao = sa.SnowflakeAccess(login_name=data["username"], password=data["password"], account_name=data["account"])
+        sao = sa(login_name=data["username"], password=data["password"], account_name=data["account"])
         is_authorized = hasattr(sao,'connection')
         if is_authorized:
             sao.close()
@@ -48,9 +47,9 @@ def private_request(req, method_name):
         try:
             sao = None
             if MODE == 'TESTING':
-                sao = sa.SnowflakeAccess(login_name=TEST_USERNAME, password=TEST_PASSWORD, account_name=TEST_ACCOUNT_NAME + ".us-east-1") # testing done on main account, not the reader acct
+                sao = sa(login_name=TEST_USERNAME, password=TEST_PASSWORD, account_name=TEST_ACCOUNT_NAME + ".us-east-1") # testing done on main account, not the reader acct
             else:
-                sao = sa.SnowflakeAccess(login_name='SEDCADMIN', password='P@rt41209', account_name=resp.get('account')) # log in as SEDCAMIN user on reader account
+                sao = sa(login_name='SEDCADMIN', password='P@rt41209', account_name=resp.get('account')) # log in as SEDCAMIN user on reader account
             sao.declare_role('accountadmin') # switch to accountadmin role
         except snowflake.connector.errors.DatabaseError:
             return 'Account is not properly configured for usage with with Snowflake Helper. Please contact an administrator.', 500
@@ -151,6 +150,8 @@ def extend_auth_token(auth_token):
     except Exception as e:
         return e
 
+def main():
+    app.run(debug=False, host='0.0.0.0')
 
 if __name__ == '__main__':
-    app.run(app.run(debug=True, host='0.0.0.0'))
+    main()

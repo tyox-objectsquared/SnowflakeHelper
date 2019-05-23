@@ -3,7 +3,6 @@ from snowflake.connector import DictCursor
 from datetime import datetime, timedelta
 from pytz import timezone
 from operator import itemgetter
-from threading import Thread
 
 TAG = "Snowflake Helper"
 SNOWFLAKE_TIME_FMT = "%a, %d %b %Y %H:%M:%S GMT"
@@ -47,7 +46,7 @@ class SnowflakeAccess:
         return user_data
 
 
-    def change_password(self, login_name, username,old_password, new_password):
+    def change_password(self, login_name, username, old_password, new_password):
         try:
             acct = SnowflakeAccess(login_name=login_name, password=old_password, account_name=self.account_name)
             self.connection.cursor().execute("alter user {0} set password = \'{1}\'/*{2}*/".format(username, new_password, TAG))
