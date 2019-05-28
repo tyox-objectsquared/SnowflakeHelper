@@ -19,6 +19,7 @@ A containerized web interface for SEDC's cooperative reader accounts to monitor 
 ##### Backend (Python):
 - Flask REST API
 - Snowflake Python Connector
+- pytest Testing Module
 ##### Frontend (NodeJS):
 - React + NodeJS libraries
 - Bootstrap

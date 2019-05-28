@@ -1,0 +1,16 @@
+#Requires NodeJS w/ npm and yarn
+
+#Setup logging
+cd ../../..
+mkdir logs/start_webapp
+timestamp=$(date +%Y-%m-%d-%H:%M:%S)
+log_path=$(pwd)/logs/start_webapp/$timestamp.log
+
+#Build the package
+cd ./webapp
+yarn | tee $log_path
+yarn build | tee $log_path
+
+#Serve the package
+yarn global add serve | tee $log_path
+npx serve -p 80 ./build

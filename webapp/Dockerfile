@@ -1,3 +1,4 @@
+#Step 1 - Build
 FROM node:8 as react-build
 
 MAINTAINER Tyler Yox "tyox@objectsquared.com"
@@ -10,6 +11,8 @@ RUN yarn
 
 RUN yarn build
 
+
+#Step 2 - Copy
 FROM mhart/alpine-node:11
 
 RUN yarn global add serve

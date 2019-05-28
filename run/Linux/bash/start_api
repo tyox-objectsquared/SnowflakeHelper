@@ -1,0 +1,35 @@
+#!/bin/bash
+#Requires Python w/ pip to run
+
+#Setup logging
+cd ../../..
+mkdir logs/start_api
+timestamp=$(date +%Y-%m-%d-%H:%M:%S)
+log_path=$(pwd)/logs/start_api/$timestamp.log
+
+
+#Install then Run virtualenv
+pip install virtualenv | tee $log_path
+cd ./sfh_api
+virtualenv venv | tee $log_path
+./venv/Scripts/activate | tee $log_path
+
+
+#Install Required Modules
+pip install --upgrade pip | tee $log_path
+pip install -r requirements.txt | tee $log_path
+
+
+#Unit Tests - optional
+while [ "$1" != "" ]; do
+    case $1 in
+        -t | --testing)    shift
+                           pytest tests\unit\test_app.py
+                           ;;
+    esac
+    shift
+done
+
+
+#Run Flask Server
+python src/main.py
