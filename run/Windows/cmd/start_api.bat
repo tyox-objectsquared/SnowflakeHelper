@@ -10,8 +10,8 @@ set log_path="%cd%/logs/start_api/%timestamp%.log"
 
 
 ::Install then Run virtualenv
-pip install virtualenv >_ && type _ && type _ > %log_path%
 cd ./sfh_api
+pip install virtualenv >_ && type _ && type _ > %log_path%
 virtualenv venv  >_ && type _ && type _ >> %log_path%
 call venv\Scripts\activate >_ && type _ && type _ >> %log_path%
 
@@ -28,6 +28,6 @@ if "%1"=="\t" (
 
 
 ::Run Flask Server
-del /f ./_
+del /f .\_
 echo on
 python src\main.py

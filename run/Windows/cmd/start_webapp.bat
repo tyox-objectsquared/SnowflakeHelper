@@ -21,6 +21,7 @@ call npm run-script build >_ && type _ && type _ >> %log_path%
 ::Serve the package
 ::yarn global add serve >_ && type _ && type _ >> %log_path%
 echo on
+del /f .\_
 npx serve -p 80 ./build
 
 PAUSE
