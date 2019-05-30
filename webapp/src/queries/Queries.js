@@ -48,7 +48,7 @@ class Queries extends Component {
     getQueries = (numMinutes: number) => {
         this.setState({queriedMinutes: numMinutes});
         const api = new API();
-        api.getHTTP("http://localhost:5000/queries", {numMinutes: numMinutes},(data, statusCode: number) => {
+        api.getHTTP("/queries", {numMinutes: numMinutes},(data, statusCode: number) => {
             if (statusCode === 401) this.props.history.push('/login');
             else if (statusCode === 500) this.setState({loading: false, error: data}); //is an error
             else {
@@ -73,7 +73,7 @@ class Queries extends Component {
 
     stop_query = (id: string) => {
         const api = new API();
-        api.postHTTP("http://localhost:5000/queries/stop", {id: id}, null, (data, statusCode) => {
+        api.postHTTP("/queries/stop", {id: id}, null, (data, statusCode) => {
             if (statusCode === 401) this.props.history.push('/login');
             else if (statusCode === 500) this.setState({loading: false, error: data}); //is an error
             else {

@@ -37,7 +37,7 @@ class Usage extends Component {
     componentDidMount(): void { //private - requires authorization
         window.addEventListener('resize', this.handleResize);
         const api = new API();
-        api.getHTTP("http://localhost:5000/usage", {},(data, statusCode) => {
+        api.getHTTP("/usage", {},(data, statusCode) => {
             if (statusCode === 401) this.props.history.push('/login');
             else if (statusCode === 500) this.setState({loading: false, error: data}); //is an error
             else {

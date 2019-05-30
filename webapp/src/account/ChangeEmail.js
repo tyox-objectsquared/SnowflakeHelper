@@ -20,7 +20,7 @@ class ChangeEmail extends Component {
     updateEmail = (email: string) => {
         const api = new API();
         this.setState({loading: true});
-        api.postHTTP("http://localhost:5000/update-email",{}, {username: Account.accountService.username, emailAddress: email}, (data, statusCode) => {
+        api.postHTTP("/update-email",{}, {username: Account.accountService.username, emailAddress: email}, (data, statusCode) => {
             if (statusCode === 401) this.props.history.push('/login');
             else if (statusCode === 500) this.setState({emailStatus: "failure", emailMessage: data});
             else if (statusCode === 200){

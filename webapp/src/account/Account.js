@@ -30,7 +30,7 @@ class Account extends Component {
 
     componentDidMount(): void {
         const api = new API();
-        api.getHTTP("http://localhost:5000/account-info", {username: localStorage.getItem("username")}, (data, statusCode) => {
+        api.getHTTP("/account-info", {username: localStorage.getItem("username")}, (data, statusCode) => {
             if (statusCode === 401) this.props.history.push('/login');
             else if (statusCode === 500) this.setState({error: data, loading: false});
             else if (statusCode === 200) {

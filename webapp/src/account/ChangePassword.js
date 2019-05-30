@@ -40,7 +40,7 @@ class ChangePassword extends Component {
     updatePassword = (oldP, newP) => {
         const api = new API();
         this.setState({passwordMessage: null, loading: true});
-        api.postHTTP("http://localhost:5000/update-password", {}, {loginName: Account.accountService.loginName, username: Account.accountService.username, oldP: oldP, newP: newP}, (data, statusCode) => {
+        api.postHTTP("/update-password", {}, {loginName: Account.accountService.loginName, username: Account.accountService.username, oldP: oldP, newP: newP}, (data, statusCode) => {
             if (statusCode === 401) this.props.history.push('/login');
             else if (statusCode === 500) this.setState({passwordStatus: "failure", passwordMessage: data});
             else if (statusCode === 200) {
