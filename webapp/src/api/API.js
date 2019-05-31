@@ -4,6 +4,8 @@ const request = require("request");
 
 class API extends Component {
 
+    AWS_URL = "http://snowflakehelper.sedatasp.com:5000";
+
     static handleResponse(error, response, body, cb) {
         if (error) cb(error.toString(), 500);
         else if (response) {
@@ -28,10 +30,10 @@ class API extends Component {
     }
 
 
-    getHTTP(url: string, qs: {}, cb) {
+    getHTTP(endpoint: string, qs: {}, cb) {
         qs.start_date = (new Date().getTime() / 1000) | 0; //truncate decimal
         request.get({
-            url: url,
+            url: this.AWS_URL + endpoint,
             json: true,
             qs: qs,
             headers: {'content-type': 'application/json', 'Authorization': App.authService.authorizationHeader}
@@ -41,10 +43,10 @@ class API extends Component {
     }
 
 
-    postHTTP(url: string,  qs: {}, payload: Object, cb) {
+    postHTTP(endpoint: string,  qs: {}, payload: Object, cb) {
         qs.start_date = (new Date().getTime() / 1000) | 0; //truncate decimal
         request.post({
-            url: url,
+            url: this.AWS_URL + endpoint,
             body: payload,
             json: true,
             qs: qs,

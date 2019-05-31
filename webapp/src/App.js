@@ -20,7 +20,7 @@ class App extends Component {
         authenticate(username, password, account, cb) {            const payload = {username: username, password: password, account: account};
             const api = new API();
             this.message = null;
-            api.postHTTP('http://localhost:5000/login', {}, payload,(data, statusCode) => {
+            api.postHTTP('/login', {}, payload,(data, statusCode) => {
                 if (statusCode === 401 || statusCode === 500) {
                     this.isAuthenticated = "no";
                     this.message = data;
